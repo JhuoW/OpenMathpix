@@ -24,8 +24,8 @@
 git clone git@github.com:JhuoW/OpenMathpix.git
 cd OpenMathpix
 npm install
-npm run dev          
-npm run package      
+npm run dev        
+npm run package    
 ```
 
 ## Getting started
@@ -34,12 +34,14 @@ npm run package
 
 1. Go to [https://aistudio.baidu.com/paddleocr](https://aistudio.baidu.com/paddleocr) and log in (or create a free Baidu AIStudio account).
 2. Click **"API"** button to access the model list. Then select a model (e.g. PaddleOCR-VL) to reveal the example code and your unique API URL and Access Token.
+
 <div align="center">
   <img src="instruct/0.png" width=50%" style="margin: 0 1.5%;"/>
 </div>
 3. Copy these two values from the example:
-  - **API URL** — your unique endpoint, e.g. `https://xxxxxx.aistudio-app.com/layout-parsing`
-  - **Access Token** — your authentication token (also at [https://aistudio.baidu.com/index/accessToken](https://aistudio.baidu.com/index/accessToken))
+
+- **API URL** — your unique endpoint, e.g. `https://xxxxxx.aistudio-app.com/layout-parsing`
+- **Access Token** — your authentication token (also at [https://aistudio.baidu.com/index/accessToken](https://aistudio.baidu.com/index/accessToken))
 
 > **Note:** Each model gets its own API URL (different subdomain). If you switch models, copy the new URL too.
 
@@ -52,22 +54,23 @@ npm run package
    - Paste your **Access Token**.
    - Select a **Pipeline** that matches the model you chose on AIStudio.
 4. Click **Test Connection** to verify.
+<div align="center">
+  <img src="instruct/1.png" width=50%" style="margin: 0 1.5%;"/>
+</div>
 
 ### Step 3: Capture and recognize
 
-#### Screen snip (recommended)
+#### Screen snip
+You can click **Snip** button in the toolbar and then click **New Snip** button to dim the screen. 
+<div align="center">
+  <img src="instruct/2.png" width=50%" style="margin: 0 1.5%;"/>
+</div>
 
-Press **Ctrl+Shift+S** (or **Cmd+Shift+S** on macOS) to dim the screen, then click and drag to select a region. Release to capture. Press **Escape** to cancel.
-
-You can also click **New Snip** in the toolbar or right-click the tray icon > **Snip**.
-
-#### Paste from clipboard
-
-Copy an image, then press **Ctrl+V** / **Cmd+V** in the OpenMathpix window.
-
-#### Drag and drop
-
-Drag a PNG, JPG, BMP, or WEBP file onto the OpenMathpix window.
+You can click and drag to select a region. Release to capture.
+<div align="center">
+  <img src="instruct/3.png" width=50%" style="margin: 0 1.5%;"/>
+  <img src="instruct/4.png" width=50%" style="margin: 0 1.5%;"/>
+</div>
 
 ## Viewing results
 
@@ -110,6 +113,9 @@ Click **Copy** to copy the active tab. The default format is auto-copied after e
 ## History
 
 Click **History** in the toolbar to browse past recognitions. Each entry shows a thumbnail, timestamp, and preview. Use the search bar to filter, or click an entry to re-open its result.
+<div align="center">
+  <img src="instruct/5.png" width=50%" style="margin: 0 1.5%;"/>
+</div>
 
 ## System tray
 
@@ -124,9 +130,9 @@ Closing the window minimizes to tray. Right-click the tray icon for:
 
 | Shortcut                           | Action                      |
 | ---------------------------------- | --------------------------- |
-| `Ctrl+Shift+S` / `Cmd+Shift+S` | Screen snip (global)        |
-| `Ctrl+V` / `Cmd+V`             | Paste image for recognition |
-| `Escape`                         | Cancel snip                 |
+| `Ctrl+Shift+S`| Screen snip (global)        |
+| `Ctrl+V` | Paste image for recognition |
+| `Escape`  | Cancel snip                 |
 
 ## License
 
