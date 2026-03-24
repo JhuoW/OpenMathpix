@@ -13,8 +13,21 @@ import { initDb } from './db';
 import { registerIpcHandlers } from './ipc';
 import { startSnip } from './capture';
 
+// Ensure only one instance runs at a time
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
 
 function getIconPath(): string {
   // In production, icon is in build/ relative to the app root (resources/app.asar)
