@@ -1,0 +1,26 @@
+appId: com.openmathpix.app
+productName: OpenMathpix
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.utilities
+win:
+  icon: build/icon.ico
+  target:
+    - nsis
+    - portable
