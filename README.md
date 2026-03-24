@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="image/OpenMathpix-logo.png" alt="OpenMathpix" width="180" />
+  <img src="image/OpenMathpix-logo.png" alt="OpenMathpix" width="300" />
 </p>
 
 <h1 align="center">OpenMathpix</h1>
 
 <p align="center">
-  Open-source desktop snipping tool that captures screen regions and converts math formulas, tables, text, and mixed documents into LaTeX, Markdown, or plain text — powered by <a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR</a> on Baidu AIStudio.
+  Open-source desktop snipping tool that captures screen regions and converts math formulas, tables, text into LaTeX, Markdown, or plain text — powered by <a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR</a> on Baidu AIStudio.
 </p>
 
 ---
@@ -21,22 +21,25 @@
 ### Build from source
 
 ```bash
-git clone https://github.com/wei2hu0/OpenMathpix.git
+git clone git@github.com:JhuoW/OpenMathpix.git
 cd OpenMathpix
 npm install
-npm run dev          # development with hot reload
-npm run package      # package for your current OS
+npm run dev          
+npm run package      
 ```
 
 ## Getting started
 
 ### Step 1: Get your API credentials
 
-1. Go to <https://aistudio.baidu.com/paddleocr/task> and log in (or create a free Baidu AIStudio account).
-2. Select a model (e.g. **PaddleOCR-VL-1.5**), then click the **"API"** tab to reveal the example code.
+1. Go to [https://aistudio.baidu.com/paddleocr](https://aistudio.baidu.com/paddleocr) and log in (or create a free Baidu AIStudio account).
+2. Click **"API"** button to access the model list. Then select a model (e.g. PaddleOCR-VL) to reveal the example code and your unique API URL and Access Token.
+<div align="center">
+  <img src="instruct/0.png" width=50%" style="margin: 0 1.5%;"/>
+</div>
 3. Copy these two values from the example:
-   - **API URL** — your unique endpoint, e.g. `https://xxxxxx.aistudio-app.com/layout-parsing`
-   - **Access Token** — your authentication token (also at <https://aistudio.baidu.com/index/accessToken>)
+  - **API URL** — your unique endpoint, e.g. `https://xxxxxx.aistudio-app.com/layout-parsing`
+  - **Access Token** — your authentication token (also at [https://aistudio.baidu.com/index/accessToken](https://aistudio.baidu.com/index/accessToken))
 
 > **Note:** Each model gets its own API URL (different subdomain). If you switch models, copy the new URL too.
 
@@ -70,37 +73,37 @@ Drag a PNG, JPG, BMP, or WEBP file onto the OpenMathpix window.
 
 After recognition, results appear in four tabs:
 
-| Tab | Description |
-|---|---|
-| **LaTeX** | Extracted math rendered via KaTeX, with copyable raw source. |
-| **Markdown** | Structured output (headings, tables, inline math). |
-| **Text** | Plain text with all formatting stripped. |
-| **Image** | The original captured screenshot. |
+| Tab                | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| **LaTeX**    | Extracted math rendered via KaTeX, with copyable raw source. |
+| **Markdown** | Structured output (headings, tables, inline math).           |
+| **Text**     | Plain text with all formatting stripped.                     |
+| **Image**    | The original captured screenshot.                            |
 
 Click **Copy** to copy the active tab. The default format is auto-copied after each recognition.
 
 ## Pipelines
 
-| Pipeline | Best for | Output |
-|---|---|---|
-| **PP-OCRv5** | General text (CJK + English) | Text only |
-| **PP-StructureV3** | Math, tables, charts, mixed layout | Markdown + LaTeX |
-| **PaddleOCR-VL** | Vision-language document parsing | Markdown + LaTeX |
+| Pipeline                   | Best for                               | Output           |
+| -------------------------- | -------------------------------------- | ---------------- |
+| **PP-OCRv5**         | General text (CJK + English)           | Text only        |
+| **PP-StructureV3**   | Math, tables, charts, mixed layout     | Markdown + LaTeX |
+| **PaddleOCR-VL**     | Vision-language document parsing       | Markdown + LaTeX |
 | **PaddleOCR-VL-1.5** | Higher accuracy, seal & irregular text | Markdown + LaTeX |
 
 > Each pipeline has its own API URL on AIStudio. When switching pipelines, update the URL in Settings to match.
 
 ## Settings
 
-| Setting | Default | Description |
-|---|---|---|
-| API URL | — | Your PaddleOCR AIStudio endpoint. |
-| Access Token | — | Stored encrypted on disk via safeStorage. |
-| Pipeline | PP-StructureV3 | Which OCR pipeline to use. |
-| Snip Hotkey | `Ctrl+Shift+S` | Global shortcut for screen capture. |
-| Default Output | LaTeX | Format auto-copied after recognition. |
-| Theme | System | Light / Dark / System. |
-| History Limit | 100 | Max saved recognitions (10–500). |
+| Setting        | Default          | Description                               |
+| -------------- | ---------------- | ----------------------------------------- |
+| API URL        | —               | Your PaddleOCR AIStudio endpoint.         |
+| Access Token   | —               | Stored encrypted on disk via safeStorage. |
+| Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                |
+| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture.       |
+| Default Output | LaTeX            | Format auto-copied after recognition.     |
+| Theme          | System           | Light / Dark / System.                    |
+| History Limit  | 100              | Max saved recognitions (10–500).         |
 
 **Self-hosted:** Set the API URL to your local server (e.g. `http://localhost:8080`) and leave the token empty.
 
@@ -119,11 +122,11 @@ Closing the window minimizes to tray. Right-click the tray icon for:
 
 ## Keyboard shortcuts
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl+Shift+S` / `Cmd+Shift+S` | Screen snip (global) |
-| `Ctrl+V` / `Cmd+V` | Paste image for recognition |
-| `Escape` | Cancel snip |
+| Shortcut                           | Action                      |
+| ---------------------------------- | --------------------------- |
+| `Ctrl+Shift+S` / `Cmd+Shift+S` | Screen snip (global)        |
+| `Ctrl+V` / `Cmd+V`             | Paste image for recognition |
+| `Escape`                         | Cancel snip                 |
 
 ## License
 
