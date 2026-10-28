@@ -14,11 +14,14 @@
 
 ### Windows (portable)
 
-1. Download `OpenMathpix-win-portable.zip` from Releases.
-2. Extract the zip file.
-3. Run `OpenMathpix.exe` from the extracted folder.
+1. Open the [latest release](https://github.com/JhuoW/OpenMathpix/releases/latest) and download **OpenMathpix-portable.exe** from **Assets** (Windows x64).
+2. For local formula recognition, install the [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe) if it is not already installed.
+3. Double-click **OpenMathpix-portable.exe** to launch the portable app.
+4. Follow [Local formula recognition](#local-formula-recognition-recommended) below to download and test MFR-1.5.
 
 ### Build from source
+
+Requires Node.js 22.12 or later and npm.
 
 ```bash
 git clone git@github.com:JhuoW/OpenMathpix.git
