@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="32" viewBox="0 0 112 32" role="img" aria-labelledby="title">
+  <title id="title">中文介绍</title>
+  <rect x="0.5" y="0.5" width="111" height="31" rx="6" fill="#0969da" stroke="#0757b3" />
+  <text x="56" y="21" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="14" font-weight="600">中文介绍</text>
+</svg>

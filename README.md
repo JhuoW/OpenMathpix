@@ -5,6 +5,12 @@
 <h1 align="center">OpenMathpix</h1>
 
 <p align="center">
+  <a href="README.zh-CN.md">
+    <img src="image/readme-zh-cn.svg" alt="中文介绍" width="112" height="32" />
+  </a>
+</p>
+
+<p align="center">
   Open-source desktop snipping tool that converts formula screenshots into LaTeX locally with <a href="https://huggingface.co/breezedeus/pix2text-mfr-1.5">Pix2Text MFR-1.5</a>, with optional <a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR</a> APIs for text, tables and document layouts.
 </p>
 
