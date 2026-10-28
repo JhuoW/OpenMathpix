@@ -1,0 +1,30 @@
+{
+  "checks": [
+    "New Snip button hides main window and captures real Xvfb desktop",
+    "overlay canvas receives pointer drag selection",
+    "cropped screenshot is recognized through MFR utility process",
+    "KaTeX formula visible and MFR history saved"
+  ],
+  "runtime": {},
+  "fixture": {
+    "id": 2,
+    "bounds": {
+      "x": 0,
+      "y": 0,
+      "width": 640,
+      "height": 480
+    }
+  },
+  "overlay": {
+    "width": 1279,
+    "height": 899,
+    "ratio": 1
+  },
+  "result": {
+    "pipeline": "MFR-1.5",
+    "latex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }"
+  },
+  "ok": true,
+  "environmentNote": "Linux x64, isolated Xvfb X11 desktop and test profile; final unpacked Electron application.",
+  "packageAsarSha256": "352a89f7447164728a4c6a29c7b02dad9cfed27ad8d65d0f51af4dd615e62bcc"
+}

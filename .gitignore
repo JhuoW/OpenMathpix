@@ -5,3 +5,7 @@ docs/
 *.log
 .DS_Store
 Thumbs.db
+.test-dist/
+*.tsbuildinfo
+__pycache__/
+*.pyc

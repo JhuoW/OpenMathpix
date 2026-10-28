@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Small reproducible synthetic implementation smoke set; not evidence of general accuracy.",
+  "source": "Generated locally from the stated LaTeX using TeX Live, Computer Modern, pdftoppm at 180 DPI, and Pillow. No user documents.",
+  "scoring": {
+    "exact": "Raw predicted LaTeX equals expectedLatex.",
+    "normalized": "Only whitespace, math delimiters, display-size/spacing commands, and declared command aliases are normalized. This is not a proof of mathematical equivalence.",
+    "visual": "Human review compares rendered prediction to the source image, including symbols, rows, and bounds. Successful rendering alone is not correctness."
+  },
+  "cases": [
+    {
+      "id": "simple",
+      "file": "simple.png",
+      "expectedLatex": "x=1",
+      "kind": "formula",
+      "description": "Short baseline, clearly typeset numeral.",
+      "sha256": "fa563f2392836467af671cbf53335fd402545a2079c5a09e6909c718ddd3350b",
+      "width": 92,
+      "height": 45
+    },
+    {
+      "id": "quadratic",
+      "file": "quadratic.png",
+      "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+      "kind": "formula",
+      "description": "Fraction, radical, superscripts, plus/minus.",
+      "sha256": "91c1cd7627be34f53361a6890e0ec7d729597b7dd9d7d9326f7662fcffa087a3",
+      "width": 284,
+      "height": 92
+    },
+    {
+      "id": "nested-fraction",
+      "file": "nested-fraction.png",
+      "expectedLatex": "\\frac{1}{1+\\frac{1}{x}}",
+      "kind": "formula",
+      "description": "Nested fractions.",
+      "sha256": "d9a87ea18e9d6d188d567880c243af7bebe822387a18a52457e0bf0688480164",
+      "width": 93,
+      "height": 97
+    },
+    {
+      "id": "gaussian-integral",
+      "file": "gaussian-integral.png",
+      "expectedLatex": "\\int_0^{\\infty} e^{-x^2}\\,dx=\\frac{\\sqrt{\\pi}}{2}",
+      "kind": "formula",
+      "description": "Integral limits, exponent, spacing command.",
+      "sha256": "4287109babea232e5c91ee05267ce1dc8827b81d4919cc45b4798217c641ff00",
+      "width": 256,
+      "height": 96
+    },
+    {
+      "id": "infinite-series",
+      "file": "infinite-series.png",
+      "expectedLatex": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}",
+      "kind": "formula",
+      "description": "Summation limits and fractions.",
+      "sha256": "9bd01a59ce97dcf287c58e7289d657b32b852e8ccd1214e97171e656ed1a6d2d",
+      "width": 179,
+      "height": 106
+    },
+    {
+      "id": "subscripts",
+      "file": "subscripts.png",
+      "expectedLatex": "a_{i,j}^{(k+1)}=\\alpha a_{i,j}^{(k)}+(1-\\alpha)b_j",
+      "kind": "formula",
+      "description": "Nested subscripts and superscripts, Greek letter.",
+      "sha256": "e7fec8f3af05fdb56c94942ddb499c0938a2dd7dc0c92fdb237a7f3576371e97",
+      "width": 348,
+      "height": 67
+    },
+    {
+      "id": "matrix",
+      "file": "matrix.png",
+      "expectedLatex": "A=\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}",
+      "kind": "formula",
+      "description": "Two-by-two matrix; alternative LaTeX environments require visual review.",
+      "sha256": "23d815805b5873bb3a93f0bf9d5bac2dd2b256342db0560d4345835bb69a18d2",
+      "width": 178,
+      "height": 97
+    },
+    {
+      "id": "piecewise",
+      "file": "piecewise.png",
+      "expectedLatex": "f(x)=\\begin{cases}x^2,&x\\geq 0\\\\-x,&x<0\\end{cases}",
+      "kind": "formula",
+      "description": "Piecewise function, brace, two rows.",
+      "sha256": "2c83aad0839ab06118e32f2f3d02308a5980219f40e6c9ee4b52d29fa7b9502f",
+      "width": 291,
+      "height": 115
+    },
+    {
+      "id": "aligned",
+      "file": "aligned.png",
+      "expectedLatex": "\\begin{aligned}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{aligned}",
+      "kind": "formula",
+      "description": "Two aligned equations; alignment syntax is not scored as semantic equivalence.",
+      "sha256": "634f22286e756f2f35f8763cd5bfd7ac44a8e81bdf05c771968d9686b9d24b1e",
+      "width": 324,
+      "height": 102
+    },
+    {
+      "id": "long-derivative",
+      "file": "long-derivative.png",
+      "expectedLatex": "\\frac{d}{dx}\\left[x^n e^{ax}\\right]=nx^{n-1}e^{ax}+ax^n e^{ax}",
+      "kind": "formula",
+      "description": "Wide expression with derivative and repeated superscripts.",
+      "sha256": "c51f44db33cf72121e1484d00fc08da1a62f0f2bebb526902d287fca971a5d92",
+      "width": 420,
+      "height": 87
+    },
+    {
+      "id": "low-resolution",
+      "file": "low-resolution.png",
+      "kind": "formula",
+      "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+      "description": "Quadratic formula downsampled to 45%; synthetic low-resolution stress case.",
+      "sha256": "bd8332fee3c4543e1f417223ad36f1ec4d52d97e6d612c944fda027f54f2dee0",
+      "width": 128,
+      "height": 41
+    },
+    {
+      "id": "dark-background",
+      "file": "dark-background.png",
+      "kind": "formula",
+      "expectedLatex": "x=1",
+      "description": "Inverted baseline simulating dark-background screenshots; intentionally outside white-page preprocessing assumptions.",
+      "sha256": "5b26dd9e841806d2bdb4dff9d795ccd2862d18cd0a5ecb659d1836bcdbb08282",
+      "width": 92,
+      "height": 45
+    },
+    {
+      "id": "blank",
+      "file": "blank.png",
+      "kind": "negative",
+      "expectedBehavior": "Reject blank input instead of presenting generated tokens as recognition.",
+      "description": "Uniform white image; excluded from formula accuracy denominator.",
+      "sha256": "a9e456c7330c9cecab36ee1bac2d90071501b3e708981c9cf5a50d7668041fe2",
+      "width": 160,
+      "height": 80
+    },
+    {
+      "id": "invalid-image",
+      "file": "invalid-image.bin",
+      "kind": "negative",
+      "expectedBehavior": "Reject invalid image data.",
+      "description": "Malformed input; excluded from formula accuracy denominator.",
+      "sha256": "cebb19a2bdb73ce8ece095efba9721ba1bc3e3a15c8c4340491a40c95a5dada8"
+    }
+  ]
+}

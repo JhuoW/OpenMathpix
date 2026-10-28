@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppStore } from './store';
 import { useOCR } from './hooks/useOCR';
+import { useMfrStatus } from './hooks/useMfrStatus';
 import SnipResult from './pages/SnipResult';
 import Settings from './pages/Settings';
 import History from './pages/History';
@@ -10,11 +11,17 @@ import StatusBar from './components/StatusBar';
 export default function App() {
   const { currentPage, setCurrentPage, setSettings, toast, showToast } = useAppStore();
   const { recognizeImage } = useOCR();
+  useMfrStatus();
 
   // Load settings on mount
   useEffect(() => {
-    window.api.getSettings().then(setSettings);
-  }, [setSettings]);
+    window.api
+      .getSettings()
+      .then(setSettings)
+      .catch(() => {
+        showToast('Could not load settings. Please reopen the app.');
+      });
+  }, [setSettings, showToast]);
 
   // Apply dark mode
   const settings = useAppStore((s) => s.settings);
@@ -28,7 +35,7 @@ export default function App() {
     } else {
       // system
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const apply = () => mq.matches ? root.classList.add('dark') : root.classList.remove('dark');
+      const apply = () => (mq.matches ? root.classList.add('dark') : root.classList.remove('dark'));
       apply();
       mq.addEventListener('change', apply);
       return () => mq.removeEventListener('change', apply);
@@ -36,16 +43,16 @@ export default function App() {
   }, [settings?.theme]);
 
   // Listen for tray navigation
-  useEffect(() => {
-    const { ipcRenderer } = window as any;
-    // The main process sends 'navigate' events from tray menu
-    // We handle this through a simple message listener on the window
-  }, []);
+  useEffect(() => window.api.onNavigate(setCurrentPage), [setCurrentPage]);
 
   // Drag & drop
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+      if (useAppStore.getState().isRecognizing) {
+        showToast('Recognition in progress. Please wait.');
+        return;
+      }
       const file = e.dataTransfer.files[0];
       if (!file) return;
       const validTypes = ['image/png', 'image/jpeg', 'image/bmp', 'image/webp'];
@@ -56,9 +63,9 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(',')[1];
-        showToast('Image loaded - recognizing...');
         recognizeImage(base64);
       };
+      reader.onerror = () => showToast('Could not read the image file.');
       reader.readAsDataURL(file);
     },
     [recognizeImage, showToast],
@@ -70,11 +77,7 @@ export default function App() {
   }, []);
 
   return (
-    <div
-      className="flex flex-col h-screen"
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
+    <div className="flex flex-col h-screen" onDrop={handleDrop} onDragOver={handleDragOver}>
       <Toolbar />
 
       <main className="flex-1 overflow-auto">

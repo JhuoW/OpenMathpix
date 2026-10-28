@@ -1,6 +1,7 @@
 import Store from 'electron-store';
 import { safeStorage } from 'electron';
 import type { AppSettings } from '../shared/types';
+import { validateSettingsUpdates } from '../shared/settings';
 
 const defaults = {
   apiUrl: '',
@@ -12,7 +13,15 @@ const defaults = {
   encryptedToken: '',
 };
 
-const store = new Store({ defaults });
+type StoredSettings = Omit<AppSettings, 'accessToken' | 'ocrEngine'> & {
+  encryptedToken: string;
+  ocrEngine?: AppSettings['ocrEngine'];
+};
+const store = new Store<StoredSettings>({ defaults });
+// Persist this migration once: clearing a cloud URL later must not switch engines.
+if (!store.has('ocrEngine')) {
+  store.set('ocrEngine', store.get('apiUrl') ? 'paddleocr' : 'mfr');
+}
 
 export function getSettings(): AppSettings {
   let accessToken = '';
@@ -25,6 +34,8 @@ export function getSettings(): AppSettings {
     }
   }
   return {
+    // Existing cloud users retain their provider; new installations start locally.
+    ocrEngine: store.get('ocrEngine', store.get('apiUrl') ? 'paddleocr' : 'mfr'),
     apiUrl: store.get('apiUrl') as string,
     accessToken,
     pipeline: store.get('pipeline') as AppSettings['pipeline'],
@@ -36,14 +47,20 @@ export function getSettings(): AppSettings {
 }
 
 export function setSettings(updates: Partial<AppSettings>): void {
-  if (updates.accessToken !== undefined) {
-    if (safeStorage.isEncryptionAvailable()) {
-      const buf = safeStorage.encryptString(updates.accessToken);
-      store.set('encryptedToken', buf.toString('base64'));
+  const { accessToken, ...rest } = validateSettingsUpdates(updates);
+  const values: Record<string, unknown> = { ...rest };
+  if (accessToken !== undefined) {
+    if (!accessToken) {
+      values.encryptedToken = '';
+    } else {
+      if (!safeStorage.isEncryptionAvailable()) {
+        throw new Error(
+          'Secure token storage is unavailable. Enable your system keyring and try again.',
+        );
+      }
+      values.encryptedToken = safeStorage.encryptString(accessToken).toString('base64');
     }
   }
-  const { accessToken: _, ...rest } = updates;
-  for (const [key, value] of Object.entries(rest)) {
-    store.set(key, value);
-  }
+  // Write the validated update in one operation, including the encrypted token.
+  store.set(values);
 }

@@ -1,0 +1,9 @@
+{
+  "elapsedMs": 4753,
+  "status": {
+    "state": "ready",
+    "downloadedBytes": 119654633,
+    "totalBytes": 119654633
+  },
+  "source": "Official pinned Hugging Face files via the production MfrModelManager; fresh temporary directory, no test fetcher."
+}

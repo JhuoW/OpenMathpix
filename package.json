@@ -1,7 +1,7 @@
 {
   "name": "openmathpix",
   "version": "0.1.0",
-  "description": "Open-source math OCR snipping tool powered by PaddleOCR",
+  "description": "Open-source formula snipping tool with local Pix2Text MFR and optional PaddleOCR",
   "main": "./out/main/index.js",
   "author": {
     "name": "jhuow",
@@ -12,20 +12,27 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder",
-    "lint": "eslint . && prettier --check ."
+    "lint": "eslint .",
+    "format:check": "prettier --check src tests *.json *.ts *.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "axios": "^1.7.0",
     "electron-store": "^8.2.0",
     "katex": "^0.16.0",
+    "onnxruntime-node": "1.31.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-markdown": "^10.0.0",
     "rehype-katex": "^7.0.0",
     "remark-math": "^6.0.0",
+    "sharp": "0.35.5",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.7.0",
@@ -37,6 +44,7 @@
     "postcss": "^8.4.0",
     "prettier": "^3.3.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.72.1"
   }
 }

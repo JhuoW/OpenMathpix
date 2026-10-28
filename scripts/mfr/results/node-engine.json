@@ -1,0 +1,177 @@
+{
+  "implementation": "Production OpenMathpix Node MFR engine, CPU.",
+  "purpose": "Small reproducible synthetic implementation smoke set; not evidence of general accuracy.",
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen Threadripper PRO 7975WX 32-Cores",
+    "logicalCpus": 64,
+    "intraOpNumThreads": 2,
+    "interOpNumThreads": 1,
+    "threadNotes": "Fixed by createMfrEngine, not the available logical CPU count.",
+    "onnxruntime": {
+      "common": "1.31.1",
+      "node": "1.31.1"
+    },
+    "sharp": "0.35.5",
+    "vips": "8.18.7"
+  },
+  "loadMs": 286.54645999999997,
+  "maxTokens": 256,
+  "timeoutMs": 90000,
+  "timingNotes": "One inference per case in listed order, no artificial warmup. Includes image preprocessing and generation; excludes session loading. OS file cache is not flushed.",
+  "cases": [
+    {
+      "id": "simple",
+      "kind": "formula",
+      "file": "simple.png",
+      "status": "ok",
+      "latex": "x = 1",
+      "generatedTokens": 3,
+      "engineElapsedMs": 189.33169700000008,
+      "elapsedMs": 189.50738199999995
+    },
+    {
+      "id": "quadratic",
+      "kind": "formula",
+      "file": "quadratic.png",
+      "status": "ok",
+      "latex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+      "generatedTokens": 27,
+      "engineElapsedMs": 358.02970200000004,
+      "elapsedMs": 358.0515740000001
+    },
+    {
+      "id": "nested-fraction",
+      "kind": "formula",
+      "file": "nested-fraction.png",
+      "status": "ok",
+      "latex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+      "generatedTokens": 17,
+      "engineElapsedMs": 275.6569750000001,
+      "elapsedMs": 275.69363999999996
+    },
+    {
+      "id": "gaussian-integral",
+      "kind": "formula",
+      "file": "gaussian-integral.png",
+      "status": "ok",
+      "latex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+      "generatedTokens": 38,
+      "engineElapsedMs": 433.47848299999987,
+      "elapsedMs": 433.5088390000001
+    },
+    {
+      "id": "infinite-series",
+      "kind": "formula",
+      "file": "infinite-series.png",
+      "status": "ok",
+      "latex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+      "generatedTokens": 57,
+      "engineElapsedMs": 633.7515859999999,
+      "elapsedMs": 633.7750619999999
+    },
+    {
+      "id": "subscripts",
+      "kind": "formula",
+      "file": "subscripts.png",
+      "status": "ok",
+      "latex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+      "generatedTokens": 43,
+      "engineElapsedMs": 474.24235099999987,
+      "elapsedMs": 474.2660270000001
+    },
+    {
+      "id": "matrix",
+      "kind": "formula",
+      "file": "matrix.png",
+      "status": "ok",
+      "latex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+      "generatedTokens": 34,
+      "engineElapsedMs": 400.5016599999999,
+      "elapsedMs": 400.5429720000002
+    },
+    {
+      "id": "piecewise",
+      "kind": "formula",
+      "file": "piecewise.png",
+      "status": "ok",
+      "latex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+      "generatedTokens": 43,
+      "engineElapsedMs": 505.45386099999996,
+      "elapsedMs": 505.48528899999974
+    },
+    {
+      "id": "aligned",
+      "kind": "formula",
+      "file": "aligned.png",
+      "status": "ok",
+      "latex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+      "generatedTokens": 80,
+      "engineElapsedMs": 867.0807109999996,
+      "elapsedMs": 867.1847289999996
+    },
+    {
+      "id": "long-derivative",
+      "kind": "formula",
+      "file": "long-derivative.png",
+      "status": "ok",
+      "latex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+      "generatedTokens": 54,
+      "engineElapsedMs": 589.4474499999997,
+      "elapsedMs": 589.4803390000006
+    },
+    {
+      "id": "low-resolution",
+      "kind": "formula",
+      "file": "low-resolution.png",
+      "status": "ok",
+      "latex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+      "generatedTokens": 31,
+      "engineElapsedMs": 392.09582899999987,
+      "elapsedMs": 392.12905899999987
+    },
+    {
+      "id": "dark-background",
+      "kind": "formula",
+      "file": "dark-background.png",
+      "status": "ok",
+      "latex": "x = 1",
+      "generatedTokens": 3,
+      "engineElapsedMs": 164.67659400000048,
+      "elapsedMs": 164.6995079999997
+    },
+    {
+      "id": "blank",
+      "kind": "negative",
+      "file": "blank.png",
+      "status": "error",
+      "error": "截图中没有可辨认的公式，请重新框选公式区域。",
+      "elapsedMs": 6.370992000000115
+    },
+    {
+      "id": "invalid-image",
+      "kind": "negative",
+      "file": "invalid-image.bin",
+      "status": "error",
+      "error": "无法读取截图，请使用有效的 PNG/JPEG 图片并缩小框选范围。",
+      "elapsedMs": 0.46388999999999214
+    }
+  ],
+  "controls": [
+    {
+      "id": "token-limit",
+      "passed": true,
+      "error": "公式输出超过 1 个 token，结果可能不完整，请分别框选较短的公式。",
+      "elapsedMs": 159.41255300000012
+    },
+    {
+      "id": "timeout",
+      "passed": true,
+      "error": "本地公式识别超时，请缩小截图范围或减少公式长度后重试。",
+      "elapsedMs": 5.158790999999837
+    }
+  ],
+  "peakRssKiB": 403464
+}

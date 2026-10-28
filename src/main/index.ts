@@ -1,17 +1,13 @@
-import {
-  app,
-  BrowserWindow,
-  globalShortcut,
-  Tray,
-  Menu,
-  nativeImage,
-  nativeTheme,
-} from 'electron';
+import { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, nativeTheme } from 'electron';
 import path from 'path';
-import { getSettings } from './store';
+import { getSettings, setSettings } from './store';
+import { IPC } from '../shared/types';
+import { validateSettingsUpdates } from '../shared/settings';
+import { saveWithShortcut } from './shortcuts';
 import { initDb } from './db';
 import { registerIpcHandlers } from './ipc';
 import { startSnip } from './capture';
+import { disposeMfr } from './mfr';
 
 // Ensure only one instance runs at a time
 const gotLock = app.requestSingleInstanceLock();
@@ -21,6 +17,7 @@ if (!gotLock) {
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let isQuitting = false;
 
 app.on('second-instance', () => {
   if (mainWindow) {
@@ -63,7 +60,7 @@ function createMainWindow(): BrowserWindow {
 
   // Minimize to tray instead of quitting
   win.on('close', (e) => {
-    if (!app.isQuitting) {
+    if (!isQuitting) {
       e.preventDefault();
       win.hide();
     }
@@ -96,14 +93,13 @@ function createTray(): void {
       click: () => {
         mainWindow?.show();
         mainWindow?.focus();
-        mainWindow?.webContents.send('navigate', 'settings');
+        mainWindow?.webContents.send(IPC.NAVIGATE, 'settings');
       },
     },
     { type: 'separator' },
     {
       label: 'Quit',
       click: () => {
-        (app as any).isQuitting = true;
         app.quit();
       },
     },
@@ -116,12 +112,19 @@ function createTray(): void {
   });
 }
 
+function triggerSnip(): void {
+  if (mainWindow) void startSnip(mainWindow);
+}
+
 function registerGlobalShortcut(): void {
   const settings = getSettings();
-  globalShortcut.unregisterAll();
-  globalShortcut.register(settings.snipHotkey, () => {
-    if (mainWindow) startSnip(mainWindow);
-  });
+  try {
+    if (!globalShortcut.register(settings.snipHotkey, triggerSnip)) {
+      console.warn('Snip hotkey unavailable:', settings.snipHotkey);
+    }
+  } catch (error) {
+    console.warn('Could not register snip hotkey:', error);
+  }
 }
 
 function applyTheme(): void {
@@ -136,7 +139,20 @@ function applyTheme(): void {
 app.whenReady().then(() => {
   initDb();
   mainWindow = createMainWindow();
-  registerIpcHandlers(mainWindow);
+  registerIpcHandlers(mainWindow, (input) => {
+    const updates = validateSettingsUpdates(input);
+    const previous = getSettings();
+    if (updates.snipHotkey !== undefined) {
+      saveWithShortcut(previous.snipHotkey, updates.snipHotkey, globalShortcut, triggerSnip, () =>
+        setSettings(updates),
+      );
+    } else {
+      // An unavailable startup shortcut must not block unrelated settings changes.
+      setSettings(updates);
+    }
+    applyTheme();
+    return getSettings();
+  });
   createTray();
   registerGlobalShortcut();
   applyTheme();
@@ -152,4 +168,9 @@ app.on('activate', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+  disposeMfr();
 });

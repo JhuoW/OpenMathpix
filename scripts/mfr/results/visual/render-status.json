@@ -1,0 +1,62 @@
+[
+  {
+    "id": "simple",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "quadratic",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "nested-fraction",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "gaussian-integral",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "infinite-series",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "subscripts",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "matrix",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "piecewise",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "aligned",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "long-derivative",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "low-resolution",
+    "rendered": true,
+    "visualReview": "pending"
+  },
+  {
+    "id": "dark-background",
+    "rendered": true,
+    "visualReview": "pending"
+  }
+]

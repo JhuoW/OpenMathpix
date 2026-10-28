@@ -1,0 +1,478 @@
+{
+  "purpose": "Small reproducible synthetic implementation smoke set; not evidence of general accuracy.",
+  "scoring": {
+    "exact": "Raw predicted LaTeX equals expectedLatex.",
+    "normalized": "Only whitespace, math delimiters, display-size/spacing commands, and declared command aliases are normalized. This is not a proof of mathematical equivalence.",
+    "visual": "Human review compares rendered prediction to the source image, including symbols, rows, and bounds. Successful rendering alone is not correctness."
+  },
+  "warning": "Counts describe only these synthetic fixtures. Normalization is not mathematical equivalence; pending visual review is not a pass.",
+  "rawOutputAgreement": [
+    {
+      "first": "scripts/mfr/results/python-reference.json",
+      "second": "scripts/mfr/results/node-engine.json",
+      "commonFormulaCases": 12,
+      "rawOutputMatches": 12,
+      "unmatchedIds": []
+    },
+    {
+      "first": "scripts/mfr/results/python-reference.json",
+      "second": "scripts/mfr/results/built-worker.json",
+      "commonFormulaCases": 12,
+      "rawOutputMatches": 12,
+      "unmatchedIds": []
+    },
+    {
+      "first": "scripts/mfr/results/node-engine.json",
+      "second": "scripts/mfr/results/built-worker.json",
+      "commonFormulaCases": 12,
+      "rawOutputMatches": 12,
+      "unmatchedIds": []
+    }
+  ],
+  "reports": [
+    {
+      "file": "scripts/mfr/results/python-reference.json",
+      "implementation": "Independent Python ONNXRuntime CPU + Pillow + tokenizers; not the official Optimum wrapper.",
+      "expectedFormulaCases": 12,
+      "formulaCases": 12,
+      "exactMatches": 0,
+      "normalizedMatches": 6,
+      "cases": [
+        {
+          "id": "simple",
+          "status": "ok",
+          "elapsedMs": 183.25351551175117,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "quadratic",
+          "status": "ok",
+          "elapsedMs": 350.6213054060936,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "nested-fraction",
+          "status": "ok",
+          "elapsedMs": 252.50108167529106,
+          "expectedLatex": "\\frac{1}{1+\\frac{1}{x}}",
+          "actualLatex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "gaussian-integral",
+          "status": "ok",
+          "elapsedMs": 423.5449321568012,
+          "expectedLatex": "\\int_0^{\\infty} e^{-x^2}\\,dx=\\frac{\\sqrt{\\pi}}{2}",
+          "actualLatex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "infinite-series",
+          "status": "ok",
+          "elapsedMs": 628.1540542840958,
+          "expectedLatex": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}",
+          "actualLatex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "subscripts",
+          "status": "ok",
+          "elapsedMs": 473.7125188112259,
+          "expectedLatex": "a_{i,j}^{(k+1)}=\\alpha a_{i,j}^{(k)}+(1-\\alpha)b_j",
+          "actualLatex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "matrix",
+          "status": "ok",
+          "elapsedMs": 403.3965803682804,
+          "expectedLatex": "A=\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}",
+          "actualLatex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "piecewise",
+          "status": "ok",
+          "elapsedMs": 482.3187068104744,
+          "expectedLatex": "f(x)=\\begin{cases}x^2,&x\\geq 0\\\\-x,&x<0\\end{cases}",
+          "actualLatex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "aligned",
+          "status": "ok",
+          "elapsedMs": 891.355387866497,
+          "expectedLatex": "\\begin{aligned}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{aligned}",
+          "actualLatex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "long-derivative",
+          "status": "ok",
+          "elapsedMs": 590.7878167927265,
+          "expectedLatex": "\\frac{d}{dx}\\left[x^n e^{ax}\\right]=nx^{n-1}e^{ax}+ax^n e^{ax}",
+          "actualLatex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "low-resolution",
+          "status": "ok",
+          "elapsedMs": 365.3162196278572,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "dark-background",
+          "status": "ok",
+          "elapsedMs": 172.55699634552002,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "blank",
+          "status": "ok",
+          "elapsedMs": 422.88339883089066,
+          "expectedBehavior": "Reject blank input instead of presenting generated tokens as recognition.",
+          "actualLatex": "\\newcommand { \\R } { \\mathbb R } \\newcommand { \\1 } { \\mathrm { d i v } } \\newcommand { \\id } { \\mathbb R }",
+          "rejected": false,
+          "error": null
+        },
+        {
+          "id": "invalid-image",
+          "status": "error",
+          "elapsedMs": 73.30978661775589,
+          "expectedBehavior": "Reject invalid image data.",
+          "actualLatex": null,
+          "rejected": true,
+          "error": "UnidentifiedImageError: cannot identify image file 'tests/fixtures/mfr/invalid-image.bin'"
+        }
+      ]
+    },
+    {
+      "file": "scripts/mfr/results/node-engine.json",
+      "implementation": "Production OpenMathpix Node MFR engine, CPU.",
+      "expectedFormulaCases": 12,
+      "formulaCases": 12,
+      "exactMatches": 0,
+      "normalizedMatches": 6,
+      "cases": [
+        {
+          "id": "simple",
+          "status": "ok",
+          "elapsedMs": 189.50738199999995,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "quadratic",
+          "status": "ok",
+          "elapsedMs": 358.0515740000001,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "nested-fraction",
+          "status": "ok",
+          "elapsedMs": 275.69363999999996,
+          "expectedLatex": "\\frac{1}{1+\\frac{1}{x}}",
+          "actualLatex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "gaussian-integral",
+          "status": "ok",
+          "elapsedMs": 433.5088390000001,
+          "expectedLatex": "\\int_0^{\\infty} e^{-x^2}\\,dx=\\frac{\\sqrt{\\pi}}{2}",
+          "actualLatex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "infinite-series",
+          "status": "ok",
+          "elapsedMs": 633.7750619999999,
+          "expectedLatex": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}",
+          "actualLatex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "subscripts",
+          "status": "ok",
+          "elapsedMs": 474.2660270000001,
+          "expectedLatex": "a_{i,j}^{(k+1)}=\\alpha a_{i,j}^{(k)}+(1-\\alpha)b_j",
+          "actualLatex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "matrix",
+          "status": "ok",
+          "elapsedMs": 400.5429720000002,
+          "expectedLatex": "A=\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}",
+          "actualLatex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "piecewise",
+          "status": "ok",
+          "elapsedMs": 505.48528899999974,
+          "expectedLatex": "f(x)=\\begin{cases}x^2,&x\\geq 0\\\\-x,&x<0\\end{cases}",
+          "actualLatex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "aligned",
+          "status": "ok",
+          "elapsedMs": 867.1847289999996,
+          "expectedLatex": "\\begin{aligned}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{aligned}",
+          "actualLatex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "long-derivative",
+          "status": "ok",
+          "elapsedMs": 589.4803390000006,
+          "expectedLatex": "\\frac{d}{dx}\\left[x^n e^{ax}\\right]=nx^{n-1}e^{ax}+ax^n e^{ax}",
+          "actualLatex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "low-resolution",
+          "status": "ok",
+          "elapsedMs": 392.12905899999987,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "dark-background",
+          "status": "ok",
+          "elapsedMs": 164.6995079999997,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "blank",
+          "status": "error",
+          "elapsedMs": 6.370992000000115,
+          "expectedBehavior": "Reject blank input instead of presenting generated tokens as recognition.",
+          "actualLatex": null,
+          "rejected": true,
+          "error": "截图中没有可辨认的公式，请重新框选公式区域。"
+        },
+        {
+          "id": "invalid-image",
+          "status": "error",
+          "elapsedMs": 0.46388999999999214,
+          "expectedBehavior": "Reject invalid image data.",
+          "actualLatex": null,
+          "rejected": true,
+          "error": "无法读取截图，请使用有效的 PNG/JPEG 图片并缩小框选范围。"
+        }
+      ]
+    },
+    {
+      "file": "scripts/mfr/results/built-worker.json",
+      "implementation": "Built OpenMathpix mfr-worker.js through child_process.fork IPC; actual worker code, not a complete Electron UI test.",
+      "expectedFormulaCases": 12,
+      "formulaCases": 12,
+      "exactMatches": 0,
+      "normalizedMatches": 6,
+      "cases": [
+        {
+          "id": "simple",
+          "status": "ok",
+          "elapsedMs": 537.193252,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "quadratic",
+          "status": "ok",
+          "elapsedMs": 410.17703099999994,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "nested-fraction",
+          "status": "ok",
+          "elapsedMs": 303.489098,
+          "expectedLatex": "\\frac{1}{1+\\frac{1}{x}}",
+          "actualLatex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "gaussian-integral",
+          "status": "ok",
+          "elapsedMs": 475.884675,
+          "expectedLatex": "\\int_0^{\\infty} e^{-x^2}\\,dx=\\frac{\\sqrt{\\pi}}{2}",
+          "actualLatex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "infinite-series",
+          "status": "ok",
+          "elapsedMs": 653.4998479999999,
+          "expectedLatex": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}",
+          "actualLatex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "subscripts",
+          "status": "ok",
+          "elapsedMs": 510.0812380000002,
+          "expectedLatex": "a_{i,j}^{(k+1)}=\\alpha a_{i,j}^{(k)}+(1-\\alpha)b_j",
+          "actualLatex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "matrix",
+          "status": "ok",
+          "elapsedMs": 418.6683509999998,
+          "expectedLatex": "A=\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}",
+          "actualLatex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "piecewise",
+          "status": "ok",
+          "elapsedMs": 479.06715600000007,
+          "expectedLatex": "f(x)=\\begin{cases}x^2,&x\\geq 0\\\\-x,&x<0\\end{cases}",
+          "actualLatex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "aligned",
+          "status": "ok",
+          "elapsedMs": 966.6753269999995,
+          "expectedLatex": "\\begin{aligned}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{aligned}",
+          "actualLatex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "long-derivative",
+          "status": "ok",
+          "elapsedMs": 616.3248739999999,
+          "expectedLatex": "\\frac{d}{dx}\\left[x^n e^{ax}\\right]=nx^{n-1}e^{ax}+ax^n e^{ax}",
+          "actualLatex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "low-resolution",
+          "status": "ok",
+          "elapsedMs": 376.9370710000003,
+          "expectedLatex": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+          "actualLatex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+          "exactMatch": false,
+          "normalizedMatch": false,
+          "visualReview": "pending"
+        },
+        {
+          "id": "dark-background",
+          "status": "ok",
+          "elapsedMs": 159.59414000000015,
+          "expectedLatex": "x=1",
+          "actualLatex": "x = 1",
+          "exactMatch": false,
+          "normalizedMatch": true,
+          "visualReview": "pending"
+        },
+        {
+          "id": "blank",
+          "status": "error",
+          "elapsedMs": 5.36920100000043,
+          "expectedBehavior": "Reject blank input instead of presenting generated tokens as recognition.",
+          "actualLatex": null,
+          "rejected": true,
+          "error": "截图中没有可辨认的公式，请重新框选公式区域。"
+        },
+        {
+          "id": "invalid-image",
+          "status": "error",
+          "elapsedMs": 0.6386149999998452,
+          "expectedBehavior": "Reject invalid image data.",
+          "actualLatex": null,
+          "rejected": true,
+          "error": "无法读取截图，请使用有效的 PNG/JPEG 图片并缩小框选范围。"
+        }
+      ]
+    }
+  ]
+}

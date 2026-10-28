@@ -1,0 +1,118 @@
+{
+  "reviewer": "assistant visual inspection",
+  "independentHumanReview": "not performed",
+  "scope": "Compared each fixture image with its rendered prediction in the two contact sheets, inspecting symbols, limits, exponents, indices, operators, matrix entries, and conditions. Rendering success alone was not used as a correctness test.",
+  "limitations": "A small synthetic smoke set; visual content agreement is not a symbolic-equivalence proof or a general OCR accuracy estimate.",
+  "reports": {
+    "python-reference": {
+      "file": "scripts/mfr/results/python-reference.json",
+      "sha256": "f36857573520bc859d376aac29793997b5c9c5e23434434ee0fa7f7f56d52ce6"
+    },
+    "node-engine": {
+      "file": "scripts/mfr/results/node-engine.json",
+      "sha256": "0edb427fd481650b7038ab4ca3feae15b7bd95f1bc1acb908aeba29dd38ce60c"
+    },
+    "built-worker": {
+      "file": "scripts/mfr/results/built-worker.json",
+      "sha256": "f4a69aaf740bd2b7cf19ad1b8406f7d453ad88ca438bca84a05847543dcba22c"
+    }
+  },
+  "evidence": [
+    {
+      "file": "scripts/mfr/results/visual/comparison-1.png",
+      "sha256": "74bb6b72185df67593479f9422f56131fc338ec3bfb1a46367b48eae6e1edf68"
+    },
+    {
+      "file": "scripts/mfr/results/visual/comparison-2.png",
+      "sha256": "e2c03b06cb350e9b90c845d4d1313fee562e31944ba4abff5d594fcd8249cc2e"
+    }
+  ],
+  "formulaCases": 12,
+  "contentMatches": 12,
+  "cases": [
+    {
+      "id": "simple",
+      "verdict": "content_matches",
+      "predictedLatex": "x = 1",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "The x variable, equality sign, and digit 1 match."
+    },
+    {
+      "id": "quadratic",
+      "verdict": "content_matches",
+      "predictedLatex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "Both signs, radical contents, fraction numerator, and denominator match."
+    },
+    {
+      "id": "nested-fraction",
+      "verdict": "content_matches",
+      "predictedLatex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "Outer and inner fraction nesting and terms match."
+    },
+    {
+      "id": "gaussian-integral",
+      "verdict": "content_matches",
+      "predictedLatex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "Integral bounds, negative quadratic exponent, differential, and right-hand fraction match; cfrac is an alternate rendering command."
+    },
+    {
+      "id": "infinite-series",
+      "verdict": "content_matches",
+      "predictedLatex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "Summation bounds, denominator exponent, and right-hand fraction match; a single-line aligned wrapper changes source syntax only."
+    },
+    {
+      "id": "subscripts",
+      "verdict": "content_matches",
+      "predictedLatex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+      "evidenceSheet": "comparison-1.png",
+      "notes": "All i,j and j subscripts, k and k+1 superscripts, alpha coefficients, and terms match."
+    },
+    {
+      "id": "matrix",
+      "verdict": "content_matches",
+      "predictedLatex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "Four matrix entries, row/column positions, and round delimiters match; matrix plus explicit parentheses replaces pmatrix."
+    },
+    {
+      "id": "piecewise",
+      "verdict": "content_matches",
+      "predictedLatex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "Both branches, square/negation, and non-strict/strict inequalities match."
+    },
+    {
+      "id": "aligned",
+      "verdict": "content_matches",
+      "predictedLatex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "Both expanded identities preserve signs, exponents, and coefficients."
+    },
+    {
+      "id": "long-derivative",
+      "verdict": "content_matches",
+      "predictedLatex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "Derivative operator, grouped expression, exponents, factors, and two result terms match."
+    },
+    {
+      "id": "low-resolution",
+      "verdict": "content_matches",
+      "predictedLatex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "The quadratic-formula content survives the synthetic downsampling; extra LaTeX grouping changes source syntax only."
+    },
+    {
+      "id": "dark-background",
+      "verdict": "content_matches",
+      "predictedLatex": "x = 1",
+      "evidenceSheet": "comparison-2.png",
+      "notes": "The x=1 content matches; prediction is rendered black on white for inspection."
+    }
+  ]
+}

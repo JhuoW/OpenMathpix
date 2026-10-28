@@ -5,7 +5,12 @@ directories:
   output: dist
 files:
   - out/**/*
-  - "!node_modules/**/*"
+  - THIRD_PARTY_NOTICES.md
+asarUnpack:
+  - node_modules/onnxruntime-node/bin/**/*
+  - node_modules/@img/**/*
+  - node_modules/sharp/**/*
+afterPack: scripts/after-pack.cjs
 extraResources:
   - from: build/icon.png
     to: icon.png

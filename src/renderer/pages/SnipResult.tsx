@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppStore } from '../store';
 import Preview from '../components/Preview';
+import { recognizeImage } from '../hooks/useOCR';
 
 const tabs = [
   { key: 'latex' as const, label: 'LaTeX' },
@@ -10,8 +11,18 @@ const tabs = [
 ];
 
 export default function SnipResult() {
-  const { activeTab, setActiveTab, ocrResult, isRecognizing, error, showToast } =
-    useAppStore();
+  const {
+    activeTab,
+    setActiveTab,
+    ocrResult,
+    isRecognizing,
+    error,
+    currentImage,
+    showToast,
+    settings,
+    mfrStatus,
+    setCurrentPage,
+  } = useAppStore();
 
   const copyResult = async (format: 'latex' | 'markdown' | 'text') => {
     if (!ocrResult) return;
@@ -21,27 +32,16 @@ export default function SnipResult() {
         : format === 'markdown'
           ? ocrResult.markdown
           : ocrResult.text;
-    await navigator.clipboard.writeText(text);
-    showToast('Copied!');
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied!');
+    } catch {
+      showToast('Could not copy. Please try again.');
+    }
   };
 
   const retry = () => {
-    const image = useAppStore.getState().currentImage;
-    if (image) {
-      useAppStore.getState().setError(null);
-      useAppStore.getState().setIsRecognizing(true);
-      window.api
-        .recognize(image)
-        .then((result) => {
-          useAppStore.getState().setOcrResult(result);
-        })
-        .catch((err: any) => {
-          useAppStore.getState().setError(err.message || 'Recognition failed');
-        })
-        .finally(() => {
-          useAppStore.getState().setIsRecognizing(false);
-        });
-    }
+    if (currentImage) void recognizeImage(currentImage);
   };
 
   return (
@@ -79,7 +79,12 @@ export default function SnipResult() {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-gray-500">Recognizing...</span>
+            <span className="text-sm text-gray-500">
+              {settings?.ocrEngine === 'mfr' ? 'Recognizing with MFR-1.5...' : 'Recognizing...'}
+            </span>
+            {settings?.ocrEngine === 'mfr' && (
+              <span className="text-xs text-gray-400">Processing the formula on this device.</span>
+            )}
           </div>
         </div>
       )}
@@ -89,12 +94,21 @@ export default function SnipResult() {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-center px-8">
             <p className="text-red-500 text-sm">{error}</p>
-            <button
-              onClick={retry}
-              className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            >
-              Retry
-            </button>
+            {settings?.ocrEngine === 'mfr' && mfrStatus?.state !== 'ready' ? (
+              <button
+                onClick={() => setCurrentPage('settings')}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                Open Model Settings
+              </button>
+            ) : currentImage ? (
+              <button
+                onClick={retry}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                Retry
+              </button>
+            ) : null}
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '../store';
 import type { HistoryItem } from '../../shared/types';
 
@@ -7,19 +7,33 @@ export default function History() {
     useAppStore();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [search, setSearch] = useState('');
+  const requestVersion = useRef(0);
 
   const loadHistory = useCallback(async () => {
-    const data = search
-      ? await window.api.searchHistory(search)
-      : await window.api.getHistory(settings?.historyLimit ?? 100);
-    setItems(data);
-  }, [search, settings?.historyLimit]);
+    const version = ++requestVersion.current;
+    try {
+      const data = search
+        ? await window.api.searchHistory(search)
+        : await window.api.getHistory(settings?.historyLimit ?? 100);
+      if (version === requestVersion.current) setItems(data);
+    } catch {
+      if (version === requestVersion.current) showToast('Could not load history.');
+    }
+  }, [search, settings?.historyLimit, showToast]);
 
   useEffect(() => {
-    loadHistory();
+    void loadHistory();
+    return () => {
+      requestVersion.current++;
+    };
   }, [loadHistory]);
 
   const openItem = (item: HistoryItem) => {
+    if (useAppStore.getState().isRecognizing) {
+      showToast('Recognition in progress. Please wait.');
+      return;
+    }
+    useAppStore.getState().setError(null);
     setCurrentImage(item.imageThumbnail);
     setOcrResult({
       latex: item.resultLatex,
@@ -38,19 +52,31 @@ export default function History() {
         : format === 'markdown'
           ? item.resultMarkdown
           : item.resultText;
-    await navigator.clipboard.writeText(text);
-    showToast('Copied!');
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied!');
+    } catch {
+      showToast('Could not copy. Please try again.');
+    }
   };
 
   const deleteItem = async (id: number) => {
-    await window.api.deleteHistoryItem(id);
-    loadHistory();
+    try {
+      await window.api.deleteHistoryItem(id);
+      await loadHistory();
+    } catch {
+      showToast('Could not delete the history item.');
+    }
   };
 
   const clearAll = async () => {
     if (!confirm('Clear all history?')) return;
-    await window.api.clearHistory();
-    loadHistory();
+    try {
+      await window.api.clearHistory();
+      await loadHistory();
+    } catch {
+      showToast('Could not clear history.');
+    }
   };
 
   return (
@@ -108,10 +134,7 @@ export default function History() {
             </div>
 
             {/* Actions */}
-            <div
-              className="flex flex-col gap-1 flex-shrink-0"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="flex flex-col gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => copyItem(item, settings?.defaultOutputFormat ?? 'latex')}
                 className="px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"

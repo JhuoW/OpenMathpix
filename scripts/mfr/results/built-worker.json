@@ -1,0 +1,184 @@
+{
+  "implementation": "Built OpenMathpix mfr-worker.js through child_process.fork IPC; actual worker code, not a complete Electron UI test.",
+  "purpose": "Small reproducible synthetic implementation smoke set; not evidence of general accuracy.",
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen Threadripper PRO 7975WX 32-Cores",
+    "logicalCpus": 64,
+    "intraOpNumThreads": 2,
+    "interOpNumThreads": 1,
+    "onnxruntime": {
+      "common": "1.31.1",
+      "node": "1.31.1"
+    },
+    "sharp": "0.35.5",
+    "vips": "8.18.7"
+  },
+  "workerSha256": "0285af070ebd267108f94ede4a98860da9db84cc0018c77a3035a8d3d748e12e",
+  "timingNotes": "External elapsedMs includes base64 serialization, IPC, and recognition. The first case also includes model initialization and worker startup; later cases reuse the worker. OS file cache is not flushed.",
+  "maxTokens": 1024,
+  "cases": [
+    {
+      "id": "simple",
+      "kind": "formula",
+      "file": "simple.png",
+      "status": "ok",
+      "elapsedMs": 537.193252,
+      "latex": "x = 1",
+      "generatedTokens": 3,
+      "engineElapsedMs": 185.60656300000005,
+      "loadMs": 305.91888800000004,
+      "workerPeakRssKiB": 268792
+    },
+    {
+      "id": "quadratic",
+      "kind": "formula",
+      "file": "quadratic.png",
+      "status": "ok",
+      "elapsedMs": 410.17703099999994,
+      "latex": "x = \\frac { - b \\pm \\sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
+      "generatedTokens": 27,
+      "engineElapsedMs": 409.75690599999996,
+      "loadMs": 0.000381000000061249,
+      "workerPeakRssKiB": 291320
+    },
+    {
+      "id": "nested-fraction",
+      "kind": "formula",
+      "file": "nested-fraction.png",
+      "status": "ok",
+      "elapsedMs": 303.489098,
+      "latex": "\\frac { 1 } { 1 + \\frac { 1 } { x } }",
+      "generatedTokens": 17,
+      "engineElapsedMs": 303.04283399999997,
+      "loadMs": 0.0006009999999605498,
+      "workerPeakRssKiB": 294392
+    },
+    {
+      "id": "gaussian-integral",
+      "kind": "formula",
+      "file": "gaussian-integral.png",
+      "status": "ok",
+      "elapsedMs": 475.884675,
+      "latex": "\\int _ { 0 } ^ { \\infty } e ^ { - x ^ { 2 } } \\, d x = \\cfrac { \\sqrt { \\pi } } { 2 }",
+      "generatedTokens": 38,
+      "engineElapsedMs": 475.35885099999996,
+      "loadMs": 0.00039100000003600144,
+      "workerPeakRssKiB": 294904
+    },
+    {
+      "id": "infinite-series",
+      "kind": "formula",
+      "file": "infinite-series.png",
+      "status": "ok",
+      "elapsedMs": 653.4998479999999,
+      "latex": "\\begin{aligned} { \\sum _ { n = 1 } ^ { \\infty } \\frac { 1 } { n ^ { 2 } } } & { { } = \\frac { \\pi ^ { 2 } } { 6 } } \\\\ \\end{aligned}",
+      "generatedTokens": 57,
+      "engineElapsedMs": 653.0173990000001,
+      "loadMs": 0.00040000000012696546,
+      "workerPeakRssKiB": 306680
+    },
+    {
+      "id": "subscripts",
+      "kind": "formula",
+      "file": "subscripts.png",
+      "status": "ok",
+      "elapsedMs": 510.0812380000002,
+      "latex": "a _ { i , j } ^ { ( k + 1 ) } = \\alpha a _ { i , j } ^ { ( k ) } + ( 1 - \\alpha ) b _ { j }",
+      "generatedTokens": 43,
+      "engineElapsedMs": 509.6073019999999,
+      "loadMs": 0.00037999999995008693,
+      "workerPeakRssKiB": 315384
+    },
+    {
+      "id": "matrix",
+      "kind": "formula",
+      "file": "matrix.png",
+      "status": "ok",
+      "elapsedMs": 418.6683509999998,
+      "latex": "A = \\left( \\begin{matrix} { a } & { b } \\\\ { c } & { d } \\\\ \\end{matrix} \\right)",
+      "generatedTokens": 34,
+      "engineElapsedMs": 417.98048100000005,
+      "loadMs": 0.0006109999999353022,
+      "workerPeakRssKiB": 325112
+    },
+    {
+      "id": "piecewise",
+      "kind": "formula",
+      "file": "piecewise.png",
+      "status": "ok",
+      "elapsedMs": 479.06715600000007,
+      "latex": "f ( x ) = \\begin{cases} { x ^ { 2 } , } & { x \\geq 0 } \\\\ { - x , } & { x < 0 } \\\\ \\end{cases}",
+      "generatedTokens": 43,
+      "engineElapsedMs": 478.44299299999966,
+      "loadMs": 0.0006410000000869331,
+      "workerPeakRssKiB": 335352
+    },
+    {
+      "id": "aligned",
+      "kind": "formula",
+      "file": "aligned.png",
+      "status": "ok",
+      "elapsedMs": 966.6753269999995,
+      "latex": "\\begin{aligned} { ( a + b ) ^ { 2 } } & { { } = a ^ { 2 } + 2 a b + b ^ { 2 } } \\\\ { \\left( a - b \\right) ^ { 2 } } & { { } = a ^ { 2 } - 2 a b + b ^ { 2 } } \\\\ \\end{aligned}",
+      "generatedTokens": 80,
+      "engineElapsedMs": 966.0971340000001,
+      "loadMs": 0.00016999999979816494,
+      "workerPeakRssKiB": 345080
+    },
+    {
+      "id": "long-derivative",
+      "kind": "formula",
+      "file": "long-derivative.png",
+      "status": "ok",
+      "elapsedMs": 616.3248739999999,
+      "latex": "\\frac { d } { d x } \\left[ x ^ { n } e ^ { a x } \\right] = n x ^ { n - 1 } e ^ { a x } + a x ^ { n } e ^ { a x }",
+      "generatedTokens": 54,
+      "engineElapsedMs": 615.8151740000003,
+      "loadMs": 0.0004600000002028537,
+      "workerPeakRssKiB": 345592
+    },
+    {
+      "id": "low-resolution",
+      "kind": "formula",
+      "file": "low-resolution.png",
+      "status": "ok",
+      "elapsedMs": 376.9370710000003,
+      "latex": "x = { \\frac { - b \\pm { \\sqrt { b ^ { 2 } - 4 a c } } } { 2 a } }",
+      "generatedTokens": 31,
+      "engineElapsedMs": 376.5456089999998,
+      "loadMs": 0.0005410000003394089,
+      "workerPeakRssKiB": 345592
+    },
+    {
+      "id": "dark-background",
+      "kind": "formula",
+      "file": "dark-background.png",
+      "status": "ok",
+      "elapsedMs": 159.59414000000015,
+      "latex": "x = 1",
+      "generatedTokens": 3,
+      "engineElapsedMs": 159.25787200000013,
+      "loadMs": 0.00033999999959632987,
+      "workerPeakRssKiB": 345592
+    },
+    {
+      "id": "blank",
+      "kind": "negative",
+      "file": "blank.png",
+      "status": "error",
+      "elapsedMs": 5.36920100000043,
+      "error": "截图中没有可辨认的公式，请重新框选公式区域。"
+    },
+    {
+      "id": "invalid-image",
+      "kind": "negative",
+      "file": "invalid-image.bin",
+      "status": "error",
+      "elapsedMs": 0.6386149999998452,
+      "error": "无法读取截图，请使用有效的 PNG/JPEG 图片并缩小框选范围。"
+    }
+  ]
+}

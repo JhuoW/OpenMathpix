@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppSettings, OCRResult } from '../shared/types';
+import type { AppSettings, MfrStatus, OCRResult } from '../shared/types';
 
 type Page = 'result' | 'settings' | 'history';
 type Tab = 'latex' | 'markdown' | 'text' | 'image';
@@ -18,6 +18,7 @@ interface AppState {
 
   // Settings (cached)
   settings: AppSettings | null;
+  mfrStatus: MfrStatus | null;
 
   // Actions
   setCurrentImage: (img: string | null) => void;
@@ -27,8 +28,11 @@ interface AppState {
   setActiveTab: (tab: Tab) => void;
   setCurrentPage: (page: Page) => void;
   setSettings: (s: AppSettings) => void;
+  setMfrStatus: (status: MfrStatus) => void;
   showToast: (msg: string) => void;
 }
+
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
 export const useAppStore = create<AppState>((set) => ({
   currentImage: null,
@@ -39,6 +43,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentPage: 'result',
   toast: null,
   settings: null,
+  mfrStatus: null,
 
   setCurrentImage: (currentImage) => set({ currentImage }),
   setOcrResult: (ocrResult) => set({ ocrResult }),
@@ -47,8 +52,10 @@ export const useAppStore = create<AppState>((set) => ({
   setActiveTab: (activeTab) => set({ activeTab }),
   setCurrentPage: (currentPage) => set({ currentPage }),
   setSettings: (settings) => set({ settings }),
+  setMfrStatus: (mfrStatus) => set({ mfrStatus }),
   showToast: (msg) => {
+    clearTimeout(toastTimer);
     set({ toast: msg });
-    setTimeout(() => set({ toast: null }), 1500);
+    toastTimer = setTimeout(() => set({ toast: null }), 2500);
   },
 }));

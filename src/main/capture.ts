@@ -1,16 +1,15 @@
-import {
-  BrowserWindow,
-  desktopCapturer,
-  screen,
-  ipcMain,
-  nativeImage,
-} from 'electron';
+import { BrowserWindow, desktopCapturer, screen, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 import { IPC } from '../shared/types';
 import type { ScreenCapture, SnipSelection } from '../shared/types';
+import { normalizedCropBounds } from './capture-geometry';
 
-let overlayWindow: BrowserWindow | null = null;
-let capturedScreens: ScreenCapture[] = [];
+interface Overlay {
+  window: BrowserWindow;
+  capture: ScreenCapture;
+  ready: boolean;
+}
+
 let snipInProgress = false;
 
 export function isSnipInProgress(): boolean {
@@ -18,162 +17,192 @@ export function isSnipInProgress(): boolean {
 }
 
 export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
-  if (snipInProgress) return;
+  if (snipInProgress || mainWindow.isDestroyed()) return;
   snipInProgress = true;
 
+  // Each display has its own overlay and normalized coordinate space.
+  const overlays = new Map<number, Overlay>();
+  let finished = false;
+  let readyTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function finish(imageBase64?: string): void {
+    if (finished) return;
+    finished = true;
+    clearTimeout(readyTimer);
+    ipcMain.removeListener(IPC.OVERLAY_READY, onReady);
+    ipcMain.removeListener(IPC.OVERLAY_SELECTION, onSelection);
+    ipcMain.removeListener(IPC.OVERLAY_CANCEL, onCancel);
+    screen.removeListener('display-removed', onDisplayChanged);
+    screen.removeListener('display-metrics-changed', onDisplayChanged);
+    for (const { window } of overlays.values()) {
+      if (!window.isDestroyed()) window.destroy();
+    }
+    overlays.clear();
+    snipInProgress = false;
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      if (imageBase64) mainWindow.webContents.send(IPC.SNIP_CAPTURED, imageBase64);
+    }
+  }
+
+  function fail(error: unknown): void {
+    if (finished) return;
+    console.error('Snip failed:', error);
+    finish();
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(
+        IPC.SNIP_ERROR,
+        error instanceof Error ? error.message : 'Screen capture failed. Please try again.',
+      );
+    }
+  }
+
+  function onReady(event: Electron.IpcMainEvent): void {
+    const overlay = overlays.get(event.sender.id);
+    if (!overlay || finished) return;
+    overlay.ready = true;
+    if (![...overlays.values()].every((entry) => entry.ready)) return;
+    clearTimeout(readyTimer);
+    const activeDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    let focusedWindow: BrowserWindow | undefined;
+    for (const entry of overlays.values()) {
+      entry.window.showInactive();
+      if (entry.capture.displayId === String(activeDisplay.id)) focusedWindow = entry.window;
+    }
+    (focusedWindow ?? overlay.window).focus();
+  }
+
+  function onSelection(event: Electron.IpcMainEvent, selection: SnipSelection): void {
+    const overlay = overlays.get(event.sender.id);
+    if (!overlay || !overlay.ready || finished) return;
+    try {
+      const croppedBase64 = cropNormalized(overlay.capture, selection);
+      if (!croppedBase64) {
+        fail(new Error('Invalid or empty selection. Please select a larger area.'));
+        return;
+      }
+      finish(croppedBase64);
+    } catch (error) {
+      fail(error);
+    }
+  }
+
+  function onCancel(event: Electron.IpcMainEvent): void {
+    if (overlays.has(event.sender.id)) finish();
+  }
+
+  function onDisplayChanged(): void {
+    // Previously captured bounds are no longer safe to use.
+    finish();
+  }
+
   try {
-    // Hide main window so it doesn't appear in the screenshot
     mainWindow.hide();
-    // Small delay to let the window fully disappear
     await new Promise((resolve) => setTimeout(resolve, 200));
+    if (mainWindow.isDestroyed()) {
+      finish();
+      return;
+    }
 
-    // Capture all screens
     const displays = screen.getAllDisplays();
-    const primaryDisplay = screen.getPrimaryDisplay();
-
-    // Use physical pixel dimensions for full-resolution capture
+    if (displays.length === 0) throw new Error('No display is available for screen capture.');
     const maxW = Math.max(...displays.map((d) => Math.round(d.size.width * d.scaleFactor)));
     const maxH = Math.max(...displays.map((d) => Math.round(d.size.height * d.scaleFactor)));
-
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: maxW, height: maxH },
     });
+    if (mainWindow.isDestroyed()) {
+      finish();
+      return;
+    }
 
-    capturedScreens = [];
+    // Register before loading/sending data so fast renderers cannot lose READY.
+    ipcMain.on(IPC.OVERLAY_READY, onReady);
+    ipcMain.on(IPC.OVERLAY_SELECTION, onSelection);
+    ipcMain.on(IPC.OVERLAY_CANCEL, onCancel);
+    screen.on('display-removed', onDisplayChanged);
+    screen.on('display-metrics-changed', onDisplayChanged);
+
     for (const display of displays) {
-      const source = sources.find((s) => s.display_id === String(display.id));
-      if (!source) continue;
-      capturedScreens.push({
+      const source =
+        sources.find((s) => s.display_id === String(display.id)) ??
+        (displays.length === 1 && sources.length === 1 ? sources[0] : undefined);
+      if (!source || source.thumbnail.isEmpty()) continue;
+      const capture: ScreenCapture = {
         dataUrl: source.thumbnail.toDataURL(),
         bounds: display.bounds,
         displayId: String(display.id),
+      };
+      const window = new BrowserWindow({
+        ...display.bounds,
+        frame: false,
+        transparent: false,
+        backgroundColor: '#000000',
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        fullscreen: process.platform !== 'darwin',
+        simpleFullscreen: process.platform === 'darwin',
+        hasShadow: false,
+        show: false,
+        webPreferences: {
+          preload: path.join(__dirname, '../preload/index.js'),
+          nodeIntegration: false,
+          contextIsolation: true,
+        },
+      });
+      overlays.set(window.webContents.id, { window, capture, ready: false });
+      window.setAlwaysOnTop(true, 'screen-saver');
+      window.on('closed', () => finish());
+      window.webContents.on('render-process-gone', () => {
+        fail(new Error('The capture window stopped responding. Please try again.'));
       });
     }
-
-    // Use the primary display for the overlay
-    const db = primaryDisplay.bounds;
-
-    // Create overlay window — NOT transparent, shows captured screenshot as background
-    overlayWindow = new BrowserWindow({
-      x: db.x,
-      y: db.y,
-      width: db.width,
-      height: db.height,
-      frame: false,
-      transparent: false,
-      backgroundColor: '#000000',
-      alwaysOnTop: true,
-      skipTaskbar: true,
-      resizable: false,
-      fullscreen: true,
-      hasShadow: false,
-      show: false,
-      webPreferences: {
-        preload: path.join(__dirname, '../preload/index.js'),
-        nodeIntegration: false,
-        contextIsolation: true,
-      },
-    });
-
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-
-    // Load overlay page
-    if (process.env.ELECTRON_RENDERER_URL) {
-      await overlayWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/overlay.html`);
-    } else {
-      await overlayWindow.loadFile(path.join(__dirname, '../renderer/overlay.html'));
+    if (overlays.size === 0) {
+      throw new Error(
+        'Unable to capture a display. Check screen recording permissions and try again.',
+      );
     }
 
-    // Find captured image for primary display
-    const primaryCapture = capturedScreens.find(
-      (s) => s.displayId === String(primaryDisplay.id),
+    readyTimer = setTimeout(() => {
+      fail(new Error('The capture window did not become ready. Please try again.'));
+    }, 15000);
+
+    await Promise.all(
+      [...overlays.values()].map(async ({ window, capture }) => {
+        if (process.env.ELECTRON_RENDERER_URL) {
+          await window.loadURL(`${process.env.ELECTRON_RENDERER_URL}/overlay.html`);
+        } else {
+          await window.loadFile(path.join(__dirname, '../renderer/overlay.html'));
+        }
+        if (finished || window.isDestroyed()) return;
+        window.webContents.send(IPC.OVERLAY_SCREEN_DATA, [
+          {
+            ...capture,
+            bounds: { ...capture.bounds, x: 0, y: 0 },
+          },
+        ]);
+      }),
     );
-    if (!primaryCapture) {
-      throw new Error('Failed to capture primary display');
-    }
-
-    // Send the primary display screenshot to the overlay
-    overlayWindow.webContents.send(IPC.OVERLAY_SCREEN_DATA, [
-      { ...primaryCapture, bounds: { x: 0, y: 0, width: db.width, height: db.height } },
-    ]);
-
-    // Show the overlay once the renderer signals it's ready
-    ipcMain.once(IPC.OVERLAY_READY, () => {
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.show();
-        overlayWindow.focus();
-      }
-    });
-
-    // Handle selection — overlay sends normalized 0-1 fractions
-    ipcMain.once(IPC.OVERLAY_SELECTION, (_event, selection: SnipSelection) => {
-      const croppedBase64 = cropNormalized(primaryCapture, selection);
-      closeOverlay();
-      mainWindow.show();
-      mainWindow.focus();
-      if (croppedBase64) {
-        mainWindow.webContents.send(IPC.SNIP_CAPTURED, croppedBase64);
-      }
-    });
-
-    ipcMain.once(IPC.OVERLAY_CANCEL, () => {
-      closeOverlay();
-      mainWindow.show();
-      mainWindow.focus();
-    });
-  } catch (err) {
-    console.error('Snip failed:', err);
-    snipInProgress = false;
-    mainWindow.show();
-    mainWindow.focus();
+  } catch (error) {
+    fail(error);
   }
 }
 
-function closeOverlay(): void {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.close();
-  }
-  overlayWindow = null;
-  snipInProgress = false;
-  ipcMain.removeAllListeners(IPC.OVERLAY_SELECTION);
-  ipcMain.removeAllListeners(IPC.OVERLAY_CANCEL);
-  ipcMain.removeAllListeners(IPC.OVERLAY_READY);
-}
-
-/**
- * Crop from a screen capture using normalized (0-1) selection fractions.
- * This is DPI-independent: fractions map directly to image pixels.
- */
-function cropNormalized(
-  capture: ScreenCapture,
-  sel: { x: number; y: number; width: number; height: number },
-): string | null {
-  const img = nativeImage.createFromDataURL(capture.dataUrl);
-  const imgSize = img.getSize();
-
-  const cropX = Math.max(0, Math.round(sel.x * imgSize.width));
-  const cropY = Math.max(0, Math.round(sel.y * imgSize.height));
-  const cropW = Math.min(Math.round(sel.width * imgSize.width), imgSize.width - cropX);
-  const cropH = Math.min(Math.round(sel.height * imgSize.height), imgSize.height - cropY);
-
-  if (cropW < 5 || cropH < 5) return null;
-
-  const cropped = img.crop({ x: cropX, y: cropY, width: cropW, height: cropH });
-  return cropped.toPNG().toString('base64');
+function cropNormalized(capture: ScreenCapture, selection: SnipSelection): string | null {
+  const image = nativeImage.createFromDataURL(capture.dataUrl);
+  if (image.isEmpty()) return null;
+  const bounds = normalizedCropBounds(selection, image.getSize());
+  if (!bounds) return null;
+  return image.crop(bounds).toPNG().toString('base64');
 }
 
 export function createThumbnail(base64: string): string {
-  const img = nativeImage.createFromBuffer(Buffer.from(base64, 'base64'));
-  const size = img.getSize();
-  const maxWidth = 200;
-  if (size.width <= maxWidth) {
-    return img.toJPEG(60).toString('base64');
-  }
-  const scale = maxWidth / size.width;
-  const resized = img.resize({
-    width: Math.round(size.width * scale),
-    height: Math.round(size.height * scale),
-  });
-  return resized.toJPEG(60).toString('base64');
+  const image = nativeImage.createFromBuffer(Buffer.from(base64, 'base64'));
+  if (image.isEmpty()) throw new Error('The captured image is empty or invalid.');
+  const size = image.getSize();
+  if (size.width <= 200) return image.toJPEG(60).toString('base64');
+  return image.resize({ width: 200 }).toJPEG(60).toString('base64');
 }

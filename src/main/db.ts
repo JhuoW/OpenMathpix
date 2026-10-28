@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import type { HistoryItem, Pipeline } from '../shared/types';
+import type { HistoryItem } from '../shared/types';
 
 interface HistoryStore {
   nextId: number;
@@ -27,7 +27,7 @@ function save(): void {
 }
 
 export function addHistoryItem(
-  pipeline: Pipeline,
+  pipeline: HistoryItem['pipeline'],
   imageThumbnail: string,
   latex: string,
   markdown: string,
