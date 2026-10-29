@@ -14,14 +14,14 @@
 
 ## 安装
 
-### Windows 便携版
+### Windows 便携版 (推荐)
 
 1. 打开 [最新发布页面](https://github.com/JhuoW/OpenMathpix/releases/latest)，在 **Assets** 中下载 **OpenMathpix-portable.exe**（Windows x64）。
 2. 如需使用本地公式识别，请确保已安装 [Microsoft Visual C++ x64 运行库](https://aka.ms/vc14/vc_redist.x64.exe)；已安装的用户可跳过此步。
 3. 双击 **OpenMathpix-portable.exe** 启动便携版应用。
 4. 按照下方的 [本地公式识别](#本地公式识别推荐) 步骤开始使用。
 
-### 从源码构建
+### 从源码构建 （可选，不推荐）
 
 需要 Node.js 22.12 或更高版本，以及 npm。
 
