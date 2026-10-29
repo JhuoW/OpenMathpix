@@ -23,7 +23,7 @@
 1. Open the [latest release](https://github.com/JhuoW/OpenMathpix/releases/latest) and download **OpenMathpix-portable.exe** from **Assets** (Windows x64).
 2. For local formula recognition, install the [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe) if it is not already installed.
 3. Double-click **OpenMathpix-portable.exe** to launch the portable app.
-4. Follow [Local formula recognition](#local-formula-recognition-recommended) below to download and test MFR-1.5.
+4. Follow [Local formula recognition](#local-formula-recognition-recommended) below to test and use.
 
 ### Build from source
 
@@ -94,6 +94,7 @@ machine into the same directory. The app verifies them on startup.
    - Paste your **Access Token**.
    - Select a **Pipeline** that matches the model you chose on AIStudio.
 4. Click **Save & Test Connection** to save your inputs and verify them with a small test image.
+
 <div align="center">
   <img src="instruct/1.png" width="50%" style="margin: 0 1.5%;"/>
 </div>
@@ -119,8 +120,8 @@ You can click and drag to select a region. Release to capture.
 
 After recognition, results appear in four tabs:
 
-| Tab          | Description                                                  |
-| ------------ | ------------------------------------------------------------ |
+| Tab                | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
 | **LaTeX**    | Extracted math rendered via KaTeX, with copyable raw source. |
 | **Markdown** | Structured output (headings, tables, inline math).           |
 | **Text**     | Plain text with all formatting stripped.                     |
@@ -130,8 +131,8 @@ Click **Copy** to copy the active tab. The default format is auto-copied after e
 
 ## Pipelines
 
-| Pipeline             | Best for                               | Output                   |
-| -------------------- | -------------------------------------- | ------------------------ |
+| Pipeline                   | Best for                               | Output                   |
+| -------------------------- | -------------------------------------- | ------------------------ |
 | **MFR-1.5 (local)**  | Single formula screenshots             | LaTeX + display Markdown |
 | **PP-OCRv5**         | General text (CJK + English)           | Text only                |
 | **PP-StructureV3**   | Math, tables, charts, mixed layout     | Markdown + LaTeX         |
@@ -142,16 +143,16 @@ Click **Copy** to copy the active tab. The default format is auto-copied after e
 
 ## Settings
 
-| Setting        | Default        | Description                                                              |
-| -------------- | -------------- | ------------------------------------------------------------------------ |
-| OCR Engine     | Local MFR-1.5  | Offline formulas or PaddleOCR API; existing cloud settings are retained. |
-| API URL        | —              | Your PaddleOCR AIStudio endpoint.                                        |
-| Access Token   | —              | Stored encrypted on disk via safeStorage.                                |
-| Pipeline       | PP-StructureV3 | Which OCR pipeline to use.                                               |
+| Setting        | Default          | Description                                                              |
+| -------------- | ---------------- | ------------------------------------------------------------------------ |
+| OCR Engine     | Local MFR-1.5    | Offline formulas or PaddleOCR API; existing cloud settings are retained. |
+| API URL        | —               | Your PaddleOCR AIStudio endpoint.                                        |
+| Access Token   | —               | Stored encrypted on disk via safeStorage.                                |
+| Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                               |
 | Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture.                                      |
-| Default Output | LaTeX          | Format auto-copied after recognition.                                    |
-| Theme          | System         | Light / Dark / System.                                                   |
-| History Limit  | 100            | Max saved recognitions (10–500).                                         |
+| Default Output | LaTeX            | Format auto-copied after recognition.                                    |
+| Theme          | System           | Light / Dark / System.                                                   |
+| History Limit  | 100              | Max saved recognitions (10–500).                                        |
 
 **Self-hosted:** Set the API URL to your local server (e.g. `http://localhost:8080`) and leave the token empty.
 
@@ -178,8 +179,8 @@ Closing the window minimizes to tray. Right-click the tray icon for:
 
 ## Keyboard shortcuts
 
-| Shortcut       | Action                      |
-| -------------- | --------------------------- |
+| Shortcut         | Action                      |
+| ---------------- | --------------------------- |
 | `Ctrl+Shift+S` | Screen snip (global)        |
 | `Ctrl+V`       | Paste image for recognition |
 | `Escape`       | Cancel snip                 |
