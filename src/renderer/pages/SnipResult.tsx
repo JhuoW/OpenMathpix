@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../store';
+import { useI18n } from '../hooks/useI18n';
 import Preview from '../components/Preview';
 import { recognizeImage } from '../hooks/useOCR';
 
@@ -11,6 +12,7 @@ const tabs = [
 ];
 
 export default function SnipResult() {
+  const { t, message } = useI18n();
   const {
     activeTab,
     setActiveTab,
@@ -59,7 +61,7 @@ export default function SnipResult() {
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
-              {label}
+              {message(label)}
             </button>
           ))}
         </div>
@@ -69,7 +71,7 @@ export default function SnipResult() {
             onClick={() => copyResult(activeTab as 'latex' | 'markdown' | 'text')}
             className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            Copy
+            {t('Copy')}
           </button>
         )}
       </div>
@@ -80,10 +82,14 @@ export default function SnipResult() {
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm text-gray-500">
-              {settings?.ocrEngine === 'mfr' ? 'Recognizing with MFR-1.5...' : 'Recognizing...'}
+              {settings?.ocrEngine === 'mfr'
+                ? t('Recognizing with MFR-1.5...')
+                : t('Recognizing...')}
             </span>
             {settings?.ocrEngine === 'mfr' && (
-              <span className="text-xs text-gray-400">Processing the formula on this device.</span>
+              <span className="text-xs text-gray-400">
+                {t('Processing the formula on this device.')}
+              </span>
             )}
           </div>
         </div>
@@ -93,20 +99,20 @@ export default function SnipResult() {
       {error && !isRecognizing && (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-center px-8">
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-red-500 text-sm">{message(error)}</p>
             {settings?.ocrEngine === 'mfr' && mfrStatus?.state !== 'ready' ? (
               <button
                 onClick={() => setCurrentPage('settings')}
                 className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
               >
-                Open Model Settings
+                {t('Open Model Settings')}
               </button>
             ) : currentImage ? (
               <button
                 onClick={retry}
                 className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
               >
-                Retry
+                {t('Retry')}
               </button>
             ) : null}
           </div>

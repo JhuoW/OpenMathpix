@@ -4,9 +4,14 @@ import Markdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { useAppStore } from '../store';
+import { useI18n } from '../hooks/useI18n';
+import type { OCRResult } from '../../shared/types';
 
 export default function Preview() {
+  const { t } = useI18n();
   const { ocrResult, activeTab, currentImage, settings, mfrStatus, setCurrentPage } = useAppStore();
+
+  const preparingModel = ['validating', 'loading', 'clearing'].includes(mfrStatus?.state || '');
 
   if (!ocrResult && activeTab !== 'image') {
     if (settings?.ocrEngine === 'mfr' && mfrStatus?.state !== 'ready') {
@@ -14,18 +19,32 @@ export default function Preview() {
         <div className="flex-1 flex items-center justify-center px-8 text-center">
           <div className="max-w-sm space-y-3">
             <p className="text-sm font-medium">
-              {mfrStatus?.state === 'downloading'
-                ? 'Your local formula model is downloading'
-                : 'Set up local formula recognition'}
+              {mfrStatus?.state === 'clearing'
+                ? t('Clearing model cache...')
+                : mfrStatus?.state === 'validating'
+                  ? t('Verifying your local formula model')
+                  : mfrStatus?.state === 'loading'
+                    ? t('Loading and testing your local formula model')
+                    : mfrStatus?.state === 'downloading'
+                      ? t('Your local formula model is downloading')
+                      : t('Set up local formula recognition')}
             </p>
             <p className="text-sm text-gray-500">
-              Download MFR-1.5 once (about 120 MB) to turn formula screenshots into LaTeX offline.
+              {preparingModel
+                ? t('The model will be available when verification and initialization finish.')
+                : t(
+                    'Download MFR-1.5 once (about 120 MB), or select an existing model folder, to recognize formulas offline.',
+                  )}
             </p>
             <button
               onClick={() => setCurrentPage('settings')}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
-              {mfrStatus?.state === 'downloading' ? 'View Download' : 'Open Model Settings'}
+              {preparingModel
+                ? t('View Model Status')
+                : mfrStatus?.state === 'downloading'
+                  ? t('View Download')
+                  : t('Open Model Settings')}
             </button>
           </div>
         </div>
@@ -33,7 +52,7 @@ export default function Preview() {
     }
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-        No result yet. Capture a snip or paste an image.
+        {t('No result yet. Capture a snip or paste an image.')}
       </div>
     );
   }
@@ -42,7 +61,7 @@ export default function Preview() {
     if (!currentImage) {
       return (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-          No image captured.
+          {t('No image captured.')}
         </div>
       );
     }
@@ -50,7 +69,7 @@ export default function Preview() {
       <div className="flex-1 overflow-auto p-4 flex items-start justify-center">
         <img
           src={`data:image/png;base64,${currentImage}`}
-          alt="Captured"
+          alt={t('Captured')}
           className="max-w-full border border-gray-200 dark:border-gray-700 rounded"
         />
       </div>
@@ -63,12 +82,12 @@ export default function Preview() {
       return (
         <div className="flex-1 p-4 text-gray-400 text-sm">
           {settings?.ocrEngine === 'mfr'
-            ? 'No LaTeX formula found. Try a clearer snip containing a single formula.'
-            : 'No LaTeX formulas found. Try PP-StructureV3 or PaddleOCR-VL pipeline.'}
+            ? t('No LaTeX formula found. Try a clearer snip containing a single formula.')
+            : t('No LaTeX formulas found. Try PP-StructureV3 or PaddleOCR-VL pipeline.')}
         </div>
       );
     }
-    return <LatexPreview latex={latex} />;
+    return <LatexPreview result={ocrResult!} />;
   }
 
   if (activeTab === 'markdown') {
@@ -89,7 +108,16 @@ export default function Preview() {
   );
 }
 
-function LatexPreview({ latex }: { latex: string }) {
+function LatexPreview({ result }: { result: OCRResult }) {
+  const { t, message } = useI18n();
+  const { latex } = result;
+  const sourceDetails = React.useRef<HTMLDetailsElement>(null);
+  // A new result can contain identical LaTeX. Reset by result identity, while native
+  // toggling remains untouched by unrelated settings, toast, or download updates.
+  React.useLayoutEffect(() => {
+    if (sourceDetails.current) sourceDetails.current.open = true;
+  }, [result]);
+
   const formulas = React.useMemo(() => {
     // OCR returns one $$...$$ block per formula. Render each independently.
     const blocks = Array.from(latex.matchAll(/\$\$([\s\S]*?)\$\$/g), (match) => match[1].trim());
@@ -124,13 +152,15 @@ function LatexPreview({ latex }: { latex: string }) {
           ) : (
             <>
               <pre className="whitespace-pre-wrap text-sm">{formula.source}</pre>
-              <p className="mt-2 text-red-500 text-xs">Parse error: {formula.error}</p>
+              <p className="mt-2 text-red-500 text-xs">
+                {t('Parse error: {message}', { message: message(formula.error) })}
+              </p>
             </>
           )}
         </div>
       ))}
-      <details className="mt-4">
-        <summary className="text-xs text-gray-400 cursor-pointer">Raw LaTeX source</summary>
+      <details ref={sourceDetails} open className="mt-4">
+        <summary className="text-xs text-gray-400 cursor-pointer">{t('Raw LaTeX source')}</summary>
         <pre className="mt-1 text-xs font-mono bg-gray-50 dark:bg-gray-800 p-2 rounded overflow-auto">
           {latex}
         </pre>

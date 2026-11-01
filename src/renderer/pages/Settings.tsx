@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useAppStore } from '../store';
-import type { AppSettings, Pipeline, OutputFormat, Theme } from '../../shared/types';
-import { validateSettingsUpdates } from '../../shared/settings';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import type { Pipeline, OutputFormat, Theme } from '../../shared/types';
+import { settingsSession } from '../settings-session';
 import MfrModelSettings from '../components/MfrModelSettings';
+import { useI18n } from '../hooks/useI18n';
 
 const pipelines: { value: Pipeline; label: string; desc: string }[] = [
   { value: 'PP-OCRv5', label: 'PP-OCRv5', desc: 'General text (CJK + English)' },
@@ -15,298 +15,263 @@ const pipelines: { value: Pipeline; label: string; desc: string }[] = [
   {
     value: 'PaddleOCR-VL-1.5',
     label: 'PaddleOCR-VL-1.5',
-    desc: 'Upgraded VL model — higher accuracy, seal & irregular text',
+    desc: 'Upgraded vision-language document parsing',
   },
 ];
+const inputClass =
+  'mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
+function FieldError({ message: error }: { message?: string }) {
+  const { t, message } = useI18n();
+  return error ? (
+    <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+      {message(error)} {t('Previous settings remain active.')}
+    </p>
+  ) : null;
+}
 
 export default function Settings() {
-  const { settings, setSettings, showToast, mfrStatus } = useAppStore();
-  const [local, setLocal] = useState<AppSettings | null>(null);
+  const { t, message } = useI18n();
+  const {
+    draft: local,
+    applied,
+    saving,
+    pending,
+    errors,
+  } = useSyncExternalStore(settingsSession.subscribe, settingsSession.getSnapshot);
   const [showToken, setShowToken] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (settings) setLocal({ ...settings });
-  }, [settings]);
+  // The queue is independent of this page: navigating away cannot discard a pending edit.
+  useEffect(() => () => settingsSession.flush(), []);
 
-  if (!local) return null;
+  if (!local || !applied) return null;
   const localEngine = local.ocrEngine === 'mfr';
-
-  const persist = async () => {
-    const updates = validateSettingsUpdates(
-      Object.fromEntries(
-        Object.entries(local).filter(
-          ([key, value]) =>
-            settings?.[key as keyof AppSettings] !== value &&
-            (!localEngine || !['apiUrl', 'accessToken', 'pipeline'].includes(key)),
-        ),
-      ),
-    );
-    const fresh = await window.api.setSettings(updates);
-    setSettings(fresh);
-    setLocal(fresh);
-  };
-
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (saving || testing) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await persist();
-      showToast('Settings saved');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save settings.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const testConnection = async () => {
-    if (saving || testing) return;
-    setTesting(true);
-    setError(null);
-    try {
-      await persist();
-      const res = await window.api.testConnection();
-      if (!res.ok) {
-        throw new Error(
-          res.error || (localEngine ? 'Local model test failed.' : 'Connection failed.'),
-        );
-      }
-      showToast(localEngine ? 'Local model test successful!' : 'Connection successful!');
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : localEngine
-            ? 'Local model test failed.'
-            : 'Connection failed.',
-      );
-    } finally {
-      setTesting(false);
-    }
-  };
+  const hasErrors = Object.keys(errors).length > 0;
 
   return (
-    <form onSubmit={save} className="max-w-lg mx-auto p-6">
-      <fieldset disabled={saving || testing} className="space-y-8 disabled:opacity-70">
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Recognition Engine</h2>
-          <div className="space-y-2">
-            {[
-              {
-                value: 'mfr' as const,
-                label: 'Local MFR-1.5',
-                desc: 'Offline formula recognition on your CPU',
-              },
-              {
-                value: 'paddleocr' as const,
-                label: 'PaddleOCR API',
-                desc: 'Cloud or self-hosted recognition service',
-              },
-            ].map((engine) => (
-              <label
-                key={engine.value}
-                className={`flex items-start gap-3 p-2 rounded border cursor-pointer ${
-                  local.ocrEngine === engine.value
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        settingsSession.flush();
+      }}
+      className="max-w-lg mx-auto p-6 space-y-8"
+    >
+      <div role="status" aria-live="polite" className="text-sm text-gray-500">
+        {saving === 'recognition'
+          ? t('Checking and applying recognition settings...')
+          : saving
+            ? t('Applying changes...')
+            : pending
+              ? t('Changes will apply automatically when you finish typing.')
+              : hasErrors
+                ? t('Some changes could not be applied. Correct the fields below to try again.')
+                : t('Changes are saved and applied automatically.')}
+      </div>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-2">{t('Recognition Engine')}</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          {t('Active engine: {engine}.', {
+            engine: t(applied.ocrEngine === 'mfr' ? 'Local MFR-1.5' : 'PaddleOCR API'),
+          })}
+          {local.ocrEngine !== applied.ocrEngine &&
+            t('The selected engine will activate after validation.')}
+        </p>
+        <div className="space-y-2">
+          {[
+            {
+              value: 'mfr' as const,
+              label: 'Local MFR-1.5',
+              desc: 'Offline formula recognition on your CPU',
+            },
+            {
+              value: 'paddleocr' as const,
+              label: 'PaddleOCR API',
+              desc: 'Cloud or self-hosted recognition service',
+            },
+          ].map((engine) => (
+            <label
+              key={engine.value}
+              className={`flex items-start gap-3 p-2 rounded border cursor-pointer ${
+                local.ocrEngine === engine.value
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="ocrEngine"
+                checked={local.ocrEngine === engine.value}
+                onChange={() => settingsSession.edit('ocrEngine', engine.value, true)}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="text-sm font-medium">
+                  {message(engine.label)}
+                  {applied.ocrEngine === engine.value && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                      {t('Active')}
+                    </span>
+                  )}
+                  {local.ocrEngine === engine.value && applied.ocrEngine !== engine.value && (
+                    <span className="ml-2 text-xs text-gray-500">{t('Pending validation')}</span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">{message(engine.desc)}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        <FieldError message={errors.recognition} />
+      </section>
+
+      {localEngine ? (
+        <MfrModelSettings />
+      ) : (
+        <section
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              settingsSession.flush('recognition');
+            }
+          }}
+        >
+          <h2 className="text-lg font-semibold mb-4">{t('API Configuration')}</h2>
+          <label className="block mb-3">
+            <span className="text-sm font-medium">{t('API URL')}</span>
+            <input
+              type="text"
+              value={local.apiUrl}
+              onChange={(event) => settingsSession.edit('apiUrl', event.target.value)}
+              placeholder="https://xxxxx.aistudio-hub.baidu.com"
+              className={inputClass}
+            />
+          </label>
+          <label className="block mb-3">
+            <span className="text-sm font-medium">{t('Access Token')}</span>
+            <div className="flex gap-2 mt-1">
+              <input
+                type={showToken ? 'text' : 'password'}
+                aria-label={t('Access Token')}
+                value={local.accessToken}
+                autoComplete="off"
+                onChange={(event) => settingsSession.edit('accessToken', event.target.value)}
+                className="min-w-0 flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(!showToken)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
               >
+                {showToken ? t('Hide') : t('Show')}
+              </button>
+            </div>
+          </label>
+          <p className="text-xs text-gray-500 mb-3">
+            {t(
+              'The connection is checked automatically before changes become active. For a self-hosted server without authentication, leave the Access Token empty.',
+            )}
+          </p>
+          <fieldset>
+            <legend className="text-sm font-medium">{t('Pipeline')}</legend>
+            <div className="mt-2 space-y-2">
+              {pipelines.map((pipeline) => (
+                <label
+                  key={pipeline.value}
+                  className={`flex items-start gap-3 p-2 rounded border cursor-pointer ${
+                    local.pipeline === pipeline.value
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="pipeline"
+                    checked={local.pipeline === pipeline.value}
+                    onChange={() => settingsSession.edit('pipeline', pipeline.value, true)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <div className="text-sm font-medium">{pipeline.label}</div>
+                    <div className="text-xs text-gray-500">{message(pipeline.desc)}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </section>
+      )}
+
+      <section>
+        <h2 className="text-lg font-semibold mb-4">{t('Preferences')}</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          {t('Change the interface language in View → Language.')}
+        </p>
+        <label className="block mb-3">
+          <span className="text-sm font-medium">{t('Snip Hotkey')}</span>
+          <input
+            type="text"
+            aria-label={t('Snip Hotkey')}
+            value={local.snipHotkey}
+            onChange={(event) => settingsSession.edit('snipHotkey', event.target.value)}
+            onBlur={() => settingsSession.flush('snipHotkey')}
+            className={inputClass}
+          />
+          <span className="text-xs text-gray-500">{t('e.g. CommandOrControl+Shift+S')}</span>
+          <FieldError message={errors.snipHotkey} />
+        </label>
+        <fieldset className="mb-3">
+          <legend className="text-sm font-medium">{t('Default Output Format')}</legend>
+          <div className="flex gap-4 mt-2">
+            {(['latex', 'markdown', 'text'] as OutputFormat[]).map((format) => (
+              <label key={format} className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
-                  name="ocrEngine"
-                  checked={local.ocrEngine === engine.value}
-                  onChange={() => {
-                    setLocal({ ...local, ocrEngine: engine.value });
-                    setError(null);
-                  }}
-                  className="mt-0.5"
+                  name="outputFormat"
+                  checked={local.defaultOutputFormat === format}
+                  onChange={() => settingsSession.edit('defaultOutputFormat', format, true)}
                 />
-                <div>
-                  <div className="text-sm font-medium">{engine.label}</div>
-                  <div className="text-xs text-gray-500">{engine.desc}</div>
-                </div>
+                {t(format === 'latex' ? 'LaTeX' : format === 'markdown' ? 'Markdown' : 'Text')}
               </label>
             ))}
           </div>
-        </section>
-
-        {/* API Configuration */}
-        {localEngine ? (
-          <MfrModelSettings />
-        ) : (
-          <section>
-            <h2 className="text-lg font-semibold mb-4">API Configuration</h2>
-
-            <label className="block mb-3">
-              <span className="text-sm font-medium">API URL</span>
-              <input
-                type="text"
-                value={local.apiUrl}
-                onChange={(e) => setLocal({ ...local, apiUrl: e.target.value })}
-                placeholder="https://xxxxx.aistudio-hub.baidu.com"
-                className="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </label>
-
-            <label className="block mb-3">
-              <span className="text-sm font-medium">Access Token</span>
-              <div className="flex gap-2 mt-1">
+          <FieldError message={errors.defaultOutputFormat} />
+        </fieldset>
+        <fieldset className="mb-3">
+          <legend className="text-sm font-medium">{t('Theme')}</legend>
+          <div className="flex gap-4 mt-2">
+            {(['light', 'dark', 'system'] as Theme[]).map((theme) => (
+              <label key={theme} className="flex items-center gap-2 text-sm">
                 <input
-                  type={showToken ? 'text' : 'password'}
-                  value={local.accessToken}
-                  onChange={(e) => setLocal({ ...local, accessToken: e.target.value })}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="radio"
+                  name="theme"
+                  checked={local.theme === theme}
+                  onChange={() => settingsSession.edit('theme', theme, true)}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  {showToken ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </label>
-
-            <p className="text-xs text-gray-400 mb-3">
-              For self-hosted PaddleOCR, leave the Access Token empty and set the API URL to your
-              local server address.
-            </p>
-
-            <label className="block mb-4">
-              <span className="text-sm font-medium">Pipeline</span>
-              <div className="mt-2 space-y-2">
-                {pipelines.map((p) => (
-                  <label
-                    key={p.value}
-                    className={`flex items-start gap-3 p-2 rounded border cursor-pointer ${
-                      local.pipeline === p.value
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="pipeline"
-                      checked={local.pipeline === p.value}
-                      onChange={() => setLocal({ ...local, pipeline: p.value })}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <div className="text-sm font-medium">{p.label}</div>
-                      <div className="text-xs text-gray-500">{p.desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </label>
-          </section>
-        )}
-
-        <div>
-          <button
-            type="button"
-            onClick={testConnection}
-            disabled={testing || (localEngine && mfrStatus?.state !== 'ready')}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {testing
-              ? localEngine
-                ? 'Testing local model...'
-                : 'Testing...'
-              : localEngine
-                ? 'Save & Test Local Model'
-                : 'Save & Test Connection'}
-          </button>
-          {localEngine && mfrStatus?.state !== 'ready' && (
-            <p className="text-xs text-gray-500 mt-2">Download the model before running a test.</p>
-          )}
-        </div>
-
-        {/* Preferences */}
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Preferences</h2>
-
-          <label className="block mb-3">
-            <span className="text-sm font-medium">Snip Hotkey</span>
-            <input
-              type="text"
-              value={local.snipHotkey}
-              onChange={(e) => setLocal({ ...local, snipHotkey: e.target.value })}
-              className="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-xs text-gray-400">e.g. CommandOrControl+Shift+S</span>
-          </label>
-
-          <label className="block mb-3">
-            <span className="text-sm font-medium">Default Output Format</span>
-            <div className="flex gap-4 mt-2">
-              {(['latex', 'markdown', 'text'] as OutputFormat[]).map((fmt) => (
-                <label key={fmt} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="outputFormat"
-                    checked={local.defaultOutputFormat === fmt}
-                    onChange={() => setLocal({ ...local, defaultOutputFormat: fmt })}
-                  />
-                  {fmt.charAt(0).toUpperCase() + fmt.slice(1)}
-                </label>
-              ))}
-            </div>
-          </label>
-
-          <label className="block mb-3">
-            <span className="text-sm font-medium">Theme</span>
-            <div className="flex gap-4 mt-2">
-              {(['light', 'dark', 'system'] as Theme[]).map((t) => (
-                <label key={t} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="theme"
-                    checked={local.theme === t}
-                    onChange={() => setLocal({ ...local, theme: t })}
-                  />
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </label>
-              ))}
-            </div>
-          </label>
-
-          <label className="block mb-3">
-            <span className="text-sm font-medium">History Limit</span>
-            <input
-              type="number"
-              min={10}
-              max={500}
-              value={local.historyLimit}
-              onChange={(e) => setLocal({ ...local, historyLimit: Number(e.target.value) })}
-              className="mt-1 block w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-        </section>
-
-        <button
-          type="submit"
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
-
-        {/* About */}
-        <section>
-          <h2 className="text-lg font-semibold mb-2">About</h2>
-          <p className="text-sm text-gray-500">OpenMathpix v0.1.0</p>
-        </section>
-      </fieldset>
-      {error && (
-        <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
+                {t(theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System')}
+              </label>
+            ))}
+          </div>
+          <FieldError message={errors.theme} />
+        </fieldset>
+        <label className="block mb-3">
+          <span className="text-sm font-medium">{t('History Limit')}</span>
+          <input
+            type="number"
+            aria-label={t('History Limit')}
+            min={10}
+            max={500}
+            value={Number.isNaN(local.historyLimit) ? '' : local.historyLimit}
+            onChange={(event) => settingsSession.edit('historyLimit', event.target.valueAsNumber)}
+            onBlur={() => settingsSession.flush('historyLimit')}
+            className={`${inputClass} !w-24`}
+          />
+          <FieldError message={errors.historyLimit} />
+        </label>
+      </section>
+      <section>
+        <h2 className="text-lg font-semibold mb-2">{t('About')}</h2>
+        <p className="text-sm text-gray-500">OpenMathpix v0.1.0</p>
+      </section>
     </form>
   );
 }

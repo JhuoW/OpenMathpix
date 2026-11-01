@@ -2,6 +2,8 @@ import React, { useEffect, useCallback } from 'react';
 import { useAppStore } from './store';
 import { useOCR } from './hooks/useOCR';
 import { useMfrStatus } from './hooks/useMfrStatus';
+import { useI18n } from './hooks/useI18n';
+import './settings-session';
 import SnipResult from './pages/SnipResult';
 import Settings from './pages/Settings';
 import History from './pages/History';
@@ -9,18 +11,35 @@ import Toolbar from './components/Toolbar';
 import StatusBar from './components/StatusBar';
 
 export default function App() {
+  const { language, message } = useI18n();
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const { currentPage, setCurrentPage, setSettings, toast, showToast } = useAppStore();
   const { recognizeImage } = useOCR();
   useMfrStatus();
 
-  // Load settings on mount
+  // Subscribe before reading so a delayed initial response cannot overwrite a committed edit.
   useEffect(() => {
+    let active = true;
+    let receivedUpdate = false;
+    const unsubscribe = window.api.onSettingsChanged((fresh) => {
+      if (!active) return;
+      receivedUpdate = true;
+      setSettings(fresh);
+    });
     window.api
       .getSettings()
-      .then(setSettings)
+      .then((fresh) => {
+        if (active && !receivedUpdate) setSettings(fresh);
+      })
       .catch(() => {
-        showToast('Could not load settings. Please reopen the app.');
+        if (active && !receivedUpdate) showToast('Could not load settings. Please reopen the app.');
       });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [setSettings, showToast]);
 
   // Apply dark mode
@@ -91,7 +110,7 @@ export default function App() {
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm toast-visible">
-          {toast}
+          {message(toast)}
         </div>
       )}
     </div>

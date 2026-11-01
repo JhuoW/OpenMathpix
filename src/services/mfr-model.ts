@@ -8,6 +8,7 @@ import axios from 'axios';
 import type { MfrStatus } from '../shared/types';
 
 export const MFR_REVISION = '1cef9f0bdcd6a4c63df7de1311fb0894593340cc';
+export const MFR_DOWNLOAD_PAGE = `https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`;
 export interface ModelFile {
   name: string;
   size: number;
@@ -56,24 +57,80 @@ export const MFR_FILES: readonly ModelFile[] = [
   },
 ];
 
-type FetchModel = (file: ModelFile, signal: AbortSignal) => Promise<Readable>;
+export type FetchModel = (file: ModelFile, signal: AbortSignal) => Promise<Readable>;
+export const mfrFileUrl = (file: ModelFile): string =>
+  `https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/${MFR_REVISION}/${file.name}?download=true`;
 const fetchModel: FetchModel = async (file, signal) => {
-  const response = await axios.get<Readable>(
-    `https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/${MFR_REVISION}/${file.name}?download=true`,
-    { responseType: 'stream', timeout: 60_000, signal, maxRedirects: 5 },
-  );
+  const response = await axios.get<Readable>(mfrFileUrl(file), {
+    responseType: 'stream',
+    timeout: 60_000,
+    signal,
+    maxRedirects: 5,
+  });
   return response.data;
 };
 
 async function validFile(path: string, file: ModelFile): Promise<boolean> {
   try {
-    if ((await stat(path)).size !== file.size) return false;
+    const info = await stat(path);
+    if (!info.isFile() || info.size !== file.size) return false;
     const hash = createHash('sha256');
     for await (const chunk of createReadStream(path)) hash.update(chunk);
     return hash.digest('hex') === file.sha256;
   } catch {
     return false;
   }
+}
+
+/** Imported files must match the same pinned model used by automatic downloads. */
+export async function validateMfrDirectory(
+  directory: string,
+  files: readonly ModelFile[] = MFR_FILES,
+): Promise<void> {
+  try {
+    if (!(await stat(directory)).isDirectory()) throw new Error('Not a directory');
+  } catch {
+    throw new Error('Select an accessible folder containing the MFR-1.5 model files.');
+  }
+  const missing: string[] = [];
+  const invalid: string[] = [];
+  for (const file of files) {
+    const path = join(directory, file.name);
+    try {
+      await stat(path);
+    } catch {
+      missing.push(file.name);
+      continue;
+    }
+    if (!(await validFile(path, file))) invalid.push(file.name);
+  }
+  if (missing.length || invalid.length) {
+    throw new Error(
+      [
+        missing.length ? `Missing or unreadable files: ${missing.join(', ')}.` : '',
+        invalid.length ? `Incomplete, corrupt, or incompatible files: ${invalid.join(', ')}.` : '',
+        'Download all eight original files from the linked MFR-1.5 revision, then select the folder containing them.',
+      ]
+        .filter(Boolean)
+        .join(' '),
+    );
+  }
+}
+
+export function mfrDownloadError(error: unknown, aborted = false): string {
+  const detail = error instanceof Error ? error.message : 'Model download failed.';
+  const guide =
+    'You can also download the eight model files from Hugging Face and use Select Local Model.';
+  if (aborted) return `Model download cancelled or timed out. Please retry. ${guide}`;
+  if (/ETIMEDOUT|ETIMEOUT|timed? ?out|timeout|ERR_CONNECTION_TIMED_OUT/i.test(detail)) {
+    return `Could not connect to the model download server in time. Check your network or system proxy and retry. ${guide}`;
+  }
+  if (
+    /ENOTFOUND|EAI_AGAIN|ECONN|ERR_(?:NAME|CONNECTION|INTERNET|PROXY)|fetch failed/i.test(detail)
+  ) {
+    return `Could not reach the model download server. Check your network or system proxy and retry. ${guide}`;
+  }
+  return `${detail} ${guide}`;
 }
 
 /** Public, pinned model files only. No screenshot data is sent by this downloader. */
@@ -126,7 +183,9 @@ export class MfrModelManager {
 
   async ensureReady(): Promise<string> {
     if ((await this.getStatus()).state !== 'ready') {
-      throw new Error('MFR-1.5 model is not ready. Download it in Settings → Local MFR-1.5.');
+      throw new Error(
+        'MFR-1.5 model is not ready. Download it or use Select Local Model in Settings.',
+      );
     }
     return this.directory;
   }
@@ -206,11 +265,7 @@ export class MfrModelManager {
       signal.throwIfAborted();
       this.emit({ ...this.status, state: 'ready', modelPath: this.directory });
     } catch (error) {
-      const message = signal.aborted
-        ? 'Model download cancelled or timed out. Please retry.'
-        : error instanceof Error
-          ? error.message
-          : 'Model download failed. Please retry.';
+      const message = mfrDownloadError(error, signal.aborted);
       this.emit({
         ...this.status,
         state: 'error',

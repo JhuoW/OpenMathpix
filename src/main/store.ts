@@ -4,23 +4,29 @@ import type { AppSettings } from '../shared/types';
 import { validateSettingsUpdates } from '../shared/settings';
 
 const defaults = {
+  ocrEngine: 'mfr' as const,
+  mfrModelPath: '',
   apiUrl: '',
   pipeline: 'PP-StructureV3' as const,
   snipHotkey: 'CommandOrControl+Shift+S',
   defaultOutputFormat: 'latex' as const,
   historyLimit: 100,
   theme: 'system' as const,
+  language: 'en' as const,
   encryptedToken: '',
 };
 
-type StoredSettings = Omit<AppSettings, 'accessToken' | 'ocrEngine'> & {
+type StoredSettings = Omit<AppSettings, 'accessToken'> & {
   encryptedToken: string;
-  ocrEngine?: AppSettings['ocrEngine'];
+  localMfrDefaultApplied?: boolean;
 };
 const store = new Store<StoredSettings>({ defaults });
-// Persist this migration once: clearing a cloud URL later must not switch engines.
-if (!store.has('ocrEngine')) {
-  store.set('ocrEngine', store.get('apiUrl') ? 'paddleocr' : 'mfr');
+
+// Earlier versions persisted PaddleOCR as a default, so changing `defaults`
+// alone cannot fix their first launch after upgrading. Apply the local default
+// once, keeping credentials and all other preferences; subsequent choices persist.
+if (store.get('localMfrDefaultApplied') !== true) {
+  store.set({ ocrEngine: 'mfr', localMfrDefaultApplied: true });
 }
 
 export function getSettings(): AppSettings {
@@ -34,8 +40,9 @@ export function getSettings(): AppSettings {
     }
   }
   return {
-    // Existing cloud users retain their provider; new installations start locally.
-    ocrEngine: store.get('ocrEngine', store.get('apiUrl') ? 'paddleocr' : 'mfr'),
+    // After the one-time migration, use the user's saved engine choice.
+    ocrEngine: store.get('ocrEngine', 'mfr'),
+    mfrModelPath: store.get('mfrModelPath', ''),
     apiUrl: store.get('apiUrl') as string,
     accessToken,
     pipeline: store.get('pipeline') as AppSettings['pipeline'],
@@ -43,6 +50,7 @@ export function getSettings(): AppSettings {
     defaultOutputFormat: store.get('defaultOutputFormat') as AppSettings['defaultOutputFormat'],
     historyLimit: store.get('historyLimit') as number,
     theme: store.get('theme') as AppSettings['theme'],
+    language: store.get('language', 'en'),
   };
 }
 

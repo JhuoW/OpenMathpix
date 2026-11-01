@@ -38,12 +38,12 @@ npm run package
 
 ### 本地公式识别（推荐）
 
-1. 打开 **Settings（设置）**，选择 **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**，然后点击 **Download MFR-1.5（下载模型）**。
-2. 首次配置需从官方 Hugging Face 仓库下载约 **120 MB** 的模型文件。下载时会显示进度并校验 SHA-256，失败后可重试。这一步需要联网，下载完成后可离线识别。
-3. 点击 **Save & Test Local Model（保存并测试本地模型）**，保存引擎选择并识别一张测试公式图。
+1. 打开 **Settings（设置）**，选择 **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**，然后点击 **Download Local Model（下载本地模型）**。
+2. 首次配置需从官方 Hugging Face 仓库下载约 **120 MB** 的模型文件。下载时会显示进度并校验 SHA-256。这一步需要联网，下载完成后可离线识别。
+3. 应用会自动加载和测试模型，成功后保存配置。等待模型就绪即可，无需点击保存按钮。
 4. 截取单个公式并保留少量边距，也可以粘贴图片或将图片拖入窗口。
 
-本地模式无需账号、API Token、Python、GPU 或本地大语言模型服务。图片由独立后台进程在本机 CPU 上处理，使用两个 CPU 线程。连续截图时会复用已加载的模型，空闲五分钟后释放资源。识别失败时不会自动切换到云端。新安装的应用默认使用 MFR；已配置 PaddleOCR URL 的用户会保留原来的云端引擎和凭据。
+本地模式无需账号、API Token、Python、GPU 或本地大语言模型服务。图片由独立后台进程在本机 CPU 上处理，使用两个 CPU 线程。连续截图时会复用已加载的模型，空闲五分钟后释放资源。识别失败时不会自动切换到云端。新安装默认使用 Local MFR-1.5；首次升级至此版本时，旧版配置会一次性切换到本地引擎，已有 API 凭据和界面语言会保留。此后手动选择的引擎会在重启后恢复。尚未下载模型时也可以先选择本地引擎，完成模型配置后即可识别。
 
 <div align="center">
   <img src="instruct/MFR-example.png" alt="本地 MFR-1.5 设置示例" width="50%" style="margin: 0 1.5%;"/>
@@ -51,7 +51,30 @@ npm run package
 
 MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面、表格或文档版面。Markdown 输出会将识别结果包裹为独立公式，Text 输出则保留 LaTeX 源码。复杂排版、手写公式和不常见的截图仍需核对。对于空白或损坏的图片、识别超时及输出超长的情况，应用会显示错误，不会复制不完整的结果。
 
-模型保存在 Electron 用户数据目录下的 `models/mfr-1.5/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/` 中；Linux 上的用户数据目录通常为 `~/.config/openmathpix/`。固定的模型版本和所有文件校验值见 `src/services/mfr-model.ts`。如需离线安装，可将这八个原始模型文件从另一台电脑复制到相同目录，应用启动时会验证文件。
+#### 使用手动下载的模型
+
+如果下载失败或超时，请检查当前网络或系统代理能否访问 Hugging Face 及其文件下载服务器，然后重试。应用下载时会使用系统代理。也可以通过浏览器下载，或从另一台电脑复制模型：
+
+1. 打开 [Hugging Face 上受支持的 MFR-1.5 固定版本](https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/1cef9f0bdcd6a4c63df7de1311fb0894593340cc)，将以下八个原始文件放入同一个文件夹：
+
+   ```text
+   encoder_model.onnx
+   decoder_model.onnx
+   config.json
+   generation_config.json
+   preprocessor_config.json
+   special_tokens_map.json
+   tokenizer.json
+   tokenizer_config.json
+   ```
+2. 在 **Settings → Local MFR-1.5** 中点击 **Select Local Model（选择本地模型）**，选择该文件夹。
+3. 应用会检查八个文件是否完整、SHA-256 是否匹配，再加载模型并识别测试公式。全部成功后才记住此目录；校验或加载失败时会保留之前可用的模型。
+
+应用直接使用所选目录中的模型，请保持该目录可用，不要移动或删除文件。重启应用后会恢复已保存的选择，无需配置 API。
+
+模型就绪后，**下载本地模型（Download Local Model）** 按钮会禁用。可在设置中点击 **清理模型缓存（Clear Model Cache）**，删除应用下载的模型并停用当前本地模型，之后下载按钮会重新启用。手动选择的外部模型文件夹及其中的原始文件不会被删除。
+
+软件默认语言为 **English**。通过 **View → Language → 简体中文 / English**（中文界面为 **视图 → 语言**）可即时切换软件语言，重启后会保留选择。点击关闭窗口时，可选择 **缩小到任务栏**、**退出软件** 或 **取消**；缩小后软件和截图快捷键仍会继续运行。
 
 ### 可选：获取 PaddleOCR API 凭据
 
@@ -76,7 +99,7 @@ MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面�
    - **API URL**：粘贴模型对应的接口地址。
    - **Access Token**：粘贴身份验证令牌。
    - **Pipeline**：选择与 AIStudio 中的模型一致的识别流程。
-4. 点击 **Save & Test Connection（保存并测试连接）**，保存配置并用一张测试图片验证连接。
+4. 应用会自动用一张测试图片验证配置，成功后保存。等待保存状态提示即可；如果验证失败，修正字段后会自动重试，在此之前仍使用原有可用配置。
 
 <div align="center">
   <img src="instruct/1.png" alt="OpenMathpix 的 PaddleOCR 配置" width="50%" style="margin: 0 1.5%;"/>
@@ -110,7 +133,7 @@ MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面�
 | **Text**     | 显示去除格式后的纯文本；本地 MFR 保留 LaTeX 源码。                  |
 | **Image**    | 显示原始截图。                                                      |
 
-点击 **Copy（复制）** 可复制当前标签页的内容。每次识别完成后，应用也会自动复制所选默认格式的结果。
+**Raw LaTeX source（LaTeX 源码）** 在每次产生新结果时默认展开，点击标题可手动折叠或展开。点击 **Copy（复制）** 可复制当前标签页的内容。每次识别完成后，应用也会自动复制所选默认格式的结果。
 
 ## 识别引擎与流程
 
@@ -126,20 +149,22 @@ MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面�
 
 ## 设置
 
-| 设置项                        | 默认值             | 说明                                                     |
-| ----------------------------- | ------------------ | -------------------------------------------------------- |
-| OCR Engine（识别引擎）        | Local MFR-1.5      | 选择本地公式识别或 PaddleOCR API；已有云端配置会被保留。 |
-| API URL                       | —                 | PaddleOCR AIStudio 接口地址。                            |
-| Access Token                  | —                 | 通过 safeStorage 加密后存储在本地。                      |
-| Pipeline（识别流程）          | PP-StructureV3     | 使用 PaddleOCR 时选择对应的识别流程。                    |
-| Snip Hotkey（截图快捷键）     | `Ctrl+Shift+S`   | 屏幕截图的全局快捷键。                                   |
-| Default Output（默认输出）    | LaTeX              | 识别完成后自动复制的格式。                               |
-| Theme（主题）                 | System（跟随系统） | 支持浅色、深色或跟随系统。                               |
-| History Limit（历史记录上限） | 100                | 最多保存的识别记录数，可设置为 10–500。                 |
+| 设置项                        | 默认值             | 说明                                                    |
+| ----------------------------- | ------------------ | ------------------------------------------------------- |
+| OCR Engine（识别引擎）        | Local MFR-1.5      | 选择本地公式识别或 PaddleOCR API；已有 API 凭据会保留。 |
+| API URL                       | —                 | PaddleOCR AIStudio 接口地址。                           |
+| Access Token                  | —                 | 通过 safeStorage 加密后存储在本地。                     |
+| Pipeline（识别流程）          | PP-StructureV3     | 使用 PaddleOCR 时选择对应的识别流程。                   |
+| Snip Hotkey（截图快捷键）     | `Ctrl+Shift+S`   | 屏幕截图的全局快捷键。                                  |
+| Default Output（默认输出）    | LaTeX              | 识别完成后自动复制的格式。                              |
+| Theme（主题）                 | System（跟随系统） | 支持浅色、深色或跟随系统。                              |
+| History Limit（历史记录上限） | 100                | 最多保存的识别记录数，可设置为 10–500。                |
 
 **自托管服务：** 将 API URL 设置为自己的服务地址（例如 `http://localhost:8080`），并将 Token 留空。
 
-点击 **Save Settings（保存设置）** 应用更改。快捷键和主题的修改会立即生效。如果新快捷键不可用，应用会保留之前的设置和快捷键。无效的 URL 和超出范围的历史记录上限会被拒绝；保存 Token 时，如果系统密钥环不可用，应用会给出提示。
+所有设置都会自动保存，并在验证通过后生效。文本字段在短暂停止输入或离开输入框时应用；下拉框和开关在选择后立即应用。模型和 API 配置变化时会显示校验或加载状态。应用失败时保留之前可用的配置，成功保存的设置会在重启后恢复。
+
+如果快捷键被占用、URL 或历史记录上限无效、模型加载失败，或保存 Token 时系统密钥环不可用，设置页会显示错误，方便修正，同时保留原有可用设置。
 
 ## 历史记录
 

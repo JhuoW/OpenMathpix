@@ -11,6 +11,29 @@ Threadripper PRO 7975WX. ONNX Runtime used two intra-op threads and one inter-op
 thread with sequential execution. This is a small implementation smoke set,
 not a representative accuracy benchmark or a laptop performance estimate.
 
+For desktop use, open **Settings → Local MFR-1.5** and use **Download Local Model**
+or **Select Local Model**. The latter accepts a folder containing the eight original
+files from the pinned revision linked above:
+
+```text
+encoder_model.onnx
+decoder_model.onnx
+config.json
+generation_config.json
+preprocessor_config.json
+special_tokens_map.json
+tokenizer.json
+tokenizer_config.json
+```
+
+The app checks file sizes and SHA-256 hashes, then initializes the candidate model
+and tests a formula before saving the selection. A failed import leaves the prior
+working model active. The folder is used directly and remembered across restarts;
+keep it available. Automatic downloads use the system proxy. If the download times
+out, check access to Hugging Face and its file download servers, retry, or download
+these files in a browser and select their folder. Settings save and validate changes
+automatically; no manual Save or Save & Test step is needed.
+
 From the repository root, set `MFR_MODEL_DIR` to the directory containing the
 downloaded encoder/decoder ONNX files, tokenizer, and model configuration files.
 The benchmark scripts do not download anything. Build and test commands require
@@ -90,6 +113,16 @@ Desktop checks use an isolated Linux profile and an optional external installati
 `playwright-core`; they do not change the user's settings or history. Run under an X11 display
 or Xvfb after `npm test` and `npm run build`. The `--packaged` option tests the native libraries
 inside the Linux unpacked distribution produced by `npx electron-builder --linux --dir`.
+The desktop smoke script checks automatic settings persistence across navigation and restart,
+manual model selection and cancellation, missing/corrupt model rollback, real inference from
+the selected folder, and the default expansion and manual toggling of Raw LaTeX source. Only
+the native folder picker's response is mocked; the app's validation and model loading run
+normally. Migration mode checks the one-time switch from old PaddleOCR settings to local MFR,
+with API credentials retained. After that migration, explicitly saved engine and language
+choices must survive restart. It also checks that local MFR can be selected before a model is
+downloaded, without leaving a pending selection, and that clearing a damaged default cache
+recovers a failed local selection. A fresh configuration must start with local MFR and English.
+No real API is contacted.
 
 ```bash
 npm install --prefix /tmp/openmathpix-ui-test playwright-core
@@ -99,7 +132,24 @@ node scripts/mfr/desktop-smoke.cjs --migration \
   --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
 node scripts/mfr/desktop-snip-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
   --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
+node scripts/mfr/download-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
+  --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
+node scripts/mfr/ux-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
+  --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
 ```
+
+The download smoke test supplies simulated timeout and streaming network responses using
+the real model files. It checks manual recovery, blocked duplicate downloads, cancelled cleanup,
+safe cache removal, and downloading/initializing all eight files again. Native dialog responses
+are simulated. It performs real ONNX inference, but does not verify external connectivity or
+system proxy behavior. Downloaded files and settings stay in a new temporary test profile.
+
+The UX smoke test exercises the native View language menu, immediate interface translation,
+language persistence across restart, cache clearing, and the close-window choices. Dialog
+responses are simulated; menu actions, window events, persistence and application exit are real.
+It verifies that cache cleanup does not delete an external model reached through a symlink.
+Under Xvfb without a window manager, minimizing is verified by observing the actual minimize
+call, not a visible taskbar. These desktop scripts cover Linux/X11 only.
 
 The recorded Linux Xvfb run exercised New Snip, actual desktop capture, overlay pointer
 selection, utility-process recognition, KaTeX preview, and history persistence. Drag/drop

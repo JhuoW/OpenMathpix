@@ -9,6 +9,7 @@ const { _electron: electron } = require(argument('--playwright-module', 'playwri
 const fs = require('node:fs/promises');
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const { waitForApp } = require('./desktop-wait.cjs');
 const root = path.resolve(__dirname, '../..');
 const base = path.resolve(
   argument(
@@ -60,7 +61,7 @@ const packaged = process.argv.includes('--packaged');
     const main = await app.firstWindow();
     await main.waitForFunction(() => Boolean(window.api));
     await main.evaluate(() => window.api.clearHistory());
-    assert.equal((await main.evaluate(() => window.api.getMfrStatus())).state, 'ready');
+    await waitForApp(main, async () => (await window.api.getMfrStatus()).state === 'ready');
 
     const formula = (await fs.readFile(root + '/tests/fixtures/mfr/quadratic.png')).toString(
       'base64',
@@ -124,7 +125,11 @@ const packaged = process.argv.includes('--packaged');
       'cropped screenshot is recognized through MFR utility process',
       'KaTeX formula visible and MFR history saved',
     );
-    await main.getByText('Raw LaTeX source', { exact: true }).click();
+    const rawSource = main.locator('details').filter({
+      has: main.getByText('Raw LaTeX source', { exact: true }),
+    });
+    assert.equal(await rawSource.evaluate((element) => element.open), true);
+    report.checks.push('Raw LaTeX source is expanded by default after a real screen capture');
     await main.screenshot({ path: base + '/result.png' });
     report.ok = true;
   } catch (error) {

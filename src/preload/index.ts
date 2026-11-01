@@ -50,7 +50,10 @@ const api = {
   recognize: (imageBase64: string): Promise<OCRResult> =>
     ipcRenderer.invoke(IPC.RECOGNIZE, imageBase64),
   getMfrStatus: (): Promise<MfrStatus> => ipcRenderer.invoke(IPC.MFR_GET_STATUS),
-  downloadMfrModel: (): Promise<void> => ipcRenderer.invoke(IPC.MFR_DOWNLOAD),
+  downloadMfrModel: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.MFR_DOWNLOAD),
+  selectMfrModel: (): Promise<AppSettings | null> => ipcRenderer.invoke(IPC.MFR_SELECT),
+  clearMfrModel: (): Promise<AppSettings | null> => ipcRenderer.invoke(IPC.MFR_CLEAR),
+  openMfrModelPage: (): Promise<void> => ipcRenderer.invoke(IPC.MFR_OPEN_MODEL_PAGE),
   onMfrStatus: (cb: (status: MfrStatus) => void) => {
     const handler = (_: Electron.IpcRendererEvent, status: MfrStatus) => cb(status);
     ipcRenderer.on(IPC.MFR_STATUS, handler);
@@ -61,6 +64,11 @@ const api = {
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.GET_SETTINGS),
   setSettings: (updates: Partial<AppSettings>): Promise<AppSettings> =>
     ipcRenderer.invoke(IPC.SET_SETTINGS, updates),
+  onSettingsChanged: (cb: (settings: AppSettings) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, settings: AppSettings) => cb(settings);
+    ipcRenderer.on(IPC.SETTINGS_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IPC.SETTINGS_CHANGED, handler);
+  },
   testConnection: (): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke(IPC.TEST_CONNECTION),
 

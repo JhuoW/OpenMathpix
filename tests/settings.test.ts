@@ -27,6 +27,7 @@ test('invalid settings cannot cross the IPC boundary', () => {
     { pipeline: 'unknown' },
     { ocrEngine: 'unknown' },
     { theme: 'invalid' },
+    { language: 'fr' },
     { defaultOutputFormat: 'image' },
     { snipHotkey: ' ' },
     { encryptedToken: 'injected' },

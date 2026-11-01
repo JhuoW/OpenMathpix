@@ -1,4 +1,4 @@
-import { ipcMain, clipboard, BrowserWindow } from 'electron';
+import { ipcMain, clipboard, BrowserWindow, dialog, shell } from 'electron';
 import { IPC } from '../shared/types';
 import type { AppSettings } from '../shared/types';
 import { recognize, testConnection } from '../services/paddleocr';
@@ -12,13 +12,25 @@ import {
   trimHistory,
 } from './db';
 import { startSnip, createThumbnail } from './capture';
-import { getMfrManager, recognizeMfr } from './mfr';
+import { downloadMfrModel, getMfrStatus, recognizeMfr } from './mfr';
+import { MFR_REVISION } from '../services/mfr-model';
 import { MFR_TEST_IMAGE } from '../shared/mfr-test-image';
 
 export function registerIpcHandlers(
   mainWindow: BrowserWindow,
-  saveSettings: (updates: Partial<AppSettings>) => AppSettings,
+  saveSettings: (updates: Partial<AppSettings>) => Promise<AppSettings>,
+  clearModel: () => Promise<AppSettings>,
 ): void {
+  let modelOperation = false;
+  async function changeModel<T>(operation: () => Promise<T>): Promise<T> {
+    if (modelOperation) throw new Error('A model operation is in progress. Please wait.');
+    modelOperation = true;
+    try {
+      return await operation();
+    } finally {
+      modelOperation = false;
+    }
+  }
   ipcMain.handle(IPC.START_SNIP, () => startSnip(mainWindow));
 
   ipcMain.handle(IPC.RECOGNIZE, async (_event, imageBase64: string) => {
@@ -56,8 +68,49 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC.GET_SETTINGS, () => getSettings());
-  ipcMain.handle(IPC.MFR_GET_STATUS, () => getMfrManager().getStatus());
-  ipcMain.handle(IPC.MFR_DOWNLOAD, () => getMfrManager().download());
+  ipcMain.handle(IPC.MFR_GET_STATUS, getMfrStatus);
+  ipcMain.handle(IPC.MFR_DOWNLOAD, () =>
+    changeModel(async () => {
+      await downloadMfrModel();
+      return saveSettings({ mfrModelPath: '' });
+    }),
+  );
+  ipcMain.handle(IPC.MFR_SELECT, () =>
+    changeModel(async () => {
+      const selected = await dialog.showOpenDialog(mainWindow, {
+        title:
+          getSettings().language === 'zh-CN'
+            ? '选择本地 MFR-1.5 模型'
+            : 'Select Local MFR-1.5 Model',
+        properties: ['openDirectory'],
+        buttonLabel: getSettings().language === 'zh-CN' ? '选择模型' : 'Select Model',
+      });
+      if (selected.canceled || !selected.filePaths[0]) return null;
+      return saveSettings({ mfrModelPath: selected.filePaths[0] });
+    }),
+  );
+  ipcMain.handle(IPC.MFR_CLEAR, () =>
+    changeModel(async () => {
+      const chinese = getSettings().language === 'zh-CN';
+      const answer = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: chinese ? '清理模型缓存' : 'Clear Model Cache',
+        message: chinese ? '清理本地模型缓存？' : 'Clear the local model cache?',
+        detail: chinese
+          ? '应用缓存目录中的模型文件将被删除，当前本地模型会停用。手动选择的外部模型目录及其文件不会删除。之后可重新下载或选择模型。'
+          : 'Model files in the application cache will be removed and the current local model will be deactivated. External model folders you selected will not be deleted. You can download or select a model again afterwards.',
+        buttons: chinese ? ['清理模型缓存', '取消'] : ['Clear Model Cache', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      });
+      if (answer.response !== 0) return null;
+      return clearModel();
+    }),
+  );
+  ipcMain.handle(IPC.MFR_OPEN_MODEL_PAGE, () =>
+    shell.openExternal(`https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`),
+  );
 
   ipcMain.handle(IPC.SET_SETTINGS, (_event, updates: Partial<AppSettings>) => {
     return saveSettings(updates);

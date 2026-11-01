@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
 import { test, type TestContext } from 'node:test';
-import { MfrModelManager, type ModelFile } from '../src/services/mfr-model';
+import {
+  MfrModelManager,
+  mfrDownloadError,
+  validateMfrDirectory,
+  type ModelFile,
+} from '../src/services/mfr-model';
 import type { MfrStatus } from '../src/shared/types';
 
 function modelFile(name: string, content: string): ModelFile {
@@ -254,4 +259,63 @@ test('cancellation after the final file is installed does not emit a later ready
   assert.ok(statuses.every((status) => status.state !== 'ready'));
   // A completely verified file is still reusable on the next attempt.
   assert.equal(await readFile(join(dir, file.name), 'utf8'), 'model');
+});
+
+test('local directory validation reports missing and corrupt files together without changing them', async (t) => {
+  const dir = await directory(t);
+  const files = [modelFile('missing.onnx', 'first'), modelFile('damaged.onnx', 'second')];
+  await writeFile(join(dir, 'damaged.onnx'), 'xxxxxx');
+  await assert.rejects(validateMfrDirectory(dir, files), (error: unknown) => {
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /Missing or unreadable files: missing.onnx/);
+    assert.match(error.message, /Incomplete, corrupt, or incompatible files: damaged.onnx/);
+    return true;
+  });
+  assert.equal(await readFile(join(dir, 'damaged.onnx'), 'utf8'), 'xxxxxx');
+  await assert.rejects(access(join(dir, 'missing.onnx')));
+});
+
+test('local directory validation rejects a file path, a file-shaped directory, and Git LFS pointers', async (t) => {
+  const dir = await directory(t);
+  const file = modelFile('model.onnx', 'expected weights');
+  await writeFile(join(dir, 'not-a-folder'), 'text');
+  await assert.rejects(
+    validateMfrDirectory(join(dir, 'not-a-folder'), [file]),
+    /accessible folder/,
+  );
+  await mkdir(join(dir, file.name));
+  await assert.rejects(validateMfrDirectory(dir, [file]), /incompatible files: model.onnx/);
+  await rm(join(dir, file.name), { recursive: true });
+  await writeFile(
+    join(dir, file.name),
+    'version https://git-lfs.github.com/spec/v1\noid sha256:abc',
+  );
+  await assert.rejects(validateMfrDirectory(dir, [file]), /incompatible files: model.onnx/);
+});
+
+test('verified imports can be reopened offline, including Hugging Face snapshot symlinks', async (t) => {
+  const dir = await directory(t);
+  const body = 'local verified weights';
+  const file = modelFile('model.onnx', body);
+  await writeFile(join(dir, 'weights-blob'), body);
+  await symlink(join(dir, 'weights-blob'), join(dir, file.name));
+  await validateMfrDirectory(dir, [file]);
+  const restarted = new MfrModelManager(dir, undefined, [file], async () => {
+    throw new Error('Import and restart must not fetch');
+  });
+  assert.equal(await restarted.ensureReady(), dir);
+});
+
+test('download network errors explain manual model selection without exposing raw IPC text', () => {
+  for (const detail of [
+    'connect ETIMEDOUT 10.0.0.1:443',
+    'net::ERR_PROXY_CONNECTION_FAILED',
+    'getaddrinfo ENOTFOUND huggingface.co',
+  ]) {
+    const message = mfrDownloadError(new Error(detail));
+    assert.match(message, /network or system proxy/);
+    assert.match(message, /Select Local Model/);
+    assert.doesNotMatch(message, /10\.0\.0\.1/);
+  }
+  assert.match(mfrDownloadError(new Error('cancelled'), true), /cancelled or timed out/);
 });

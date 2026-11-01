@@ -12,10 +12,14 @@ export const IPC = {
   RECOGNIZE: 'ocr:recognize',
   MFR_GET_STATUS: 'mfr:status:get',
   MFR_DOWNLOAD: 'mfr:download',
+  MFR_SELECT: 'mfr:select',
+  MFR_CLEAR: 'mfr:clear',
+  MFR_OPEN_MODEL_PAGE: 'mfr:open-model-page',
   MFR_STATUS: 'mfr:status',
 
   GET_SETTINGS: 'settings:get',
   SET_SETTINGS: 'settings:set',
+  SETTINGS_CHANGED: 'settings:changed',
   TEST_CONNECTION: 'settings:test-connection',
 
   GET_HISTORY: 'history:get',
@@ -30,9 +34,17 @@ export type Pipeline = 'PP-OCRv5' | 'PP-StructureV3' | 'PaddleOCR-VL' | 'PaddleO
 export type OutputFormat = 'latex' | 'markdown' | 'text';
 export type Theme = 'light' | 'dark' | 'system';
 export type OCREngine = 'paddleocr' | 'mfr';
+export type Language = 'en' | 'zh-CN';
 
 export interface MfrStatus {
-  state: 'not-downloaded' | 'downloading' | 'ready' | 'error';
+  state:
+    | 'not-downloaded'
+    | 'downloading'
+    | 'validating'
+    | 'loading'
+    | 'clearing'
+    | 'ready'
+    | 'error';
   downloadedBytes: number;
   totalBytes: number;
   error?: string;
@@ -41,6 +53,8 @@ export interface MfrStatus {
 
 export interface AppSettings {
   ocrEngine: OCREngine;
+  /** Empty uses the managed download directory; otherwise a verified local directory. */
+  mfrModelPath: string;
   apiUrl: string;
   accessToken: string;
   pipeline: Pipeline;
@@ -48,6 +62,7 @@ export interface AppSettings {
   defaultOutputFormat: OutputFormat;
   historyLimit: number;
   theme: Theme;
+  language: Language;
 }
 
 export interface OCRResult {

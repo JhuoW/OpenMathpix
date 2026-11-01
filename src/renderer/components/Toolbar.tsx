@@ -1,7 +1,9 @@
 import React from 'react';
 import { useAppStore } from '../store';
+import { useI18n } from '../hooks/useI18n';
 
 export default function Toolbar() {
+  const { t, message } = useI18n();
   const { currentPage, setCurrentPage, isRecognizing, showToast } = useAppStore();
 
   const navItems: { page: 'result' | 'settings' | 'history'; label: string }[] = [
@@ -33,7 +35,7 @@ export default function Toolbar() {
                 : 'hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
-            {label}
+            {message(label)}
           </button>
         ))}
       </nav>
@@ -48,7 +50,7 @@ export default function Toolbar() {
         className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-wait transition-colors"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        New Snip
+        {t('New Snip')}
       </button>
     </header>
   );

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '../store';
+import { useI18n } from '../hooks/useI18n';
 import type { HistoryItem } from '../../shared/types';
 
 export default function History() {
+  const { language, t } = useI18n();
   const { showToast, setCurrentImage, setOcrResult, setActiveTab, setCurrentPage, settings } =
     useAppStore();
   const [items, setItems] = useState<HistoryItem[]>([]);
@@ -70,7 +72,7 @@ export default function History() {
   };
 
   const clearAll = async () => {
-    if (!confirm('Clear all history?')) return;
+    if (!confirm(t('Clear all history?'))) return;
     try {
       await window.api.clearHistory();
       await loadHistory();
@@ -87,14 +89,14 @@ export default function History() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search history..."
+          placeholder={t('Search history...')}
           className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={clearAll}
           className="px-3 py-1.5 text-sm text-red-600 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         >
-          Clear All
+          {t('Clear All')}
         </button>
       </div>
 
@@ -102,7 +104,7 @@ export default function History() {
       <div className="flex-1 overflow-auto">
         {items.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-            No history yet.
+            {t('No history yet.')}
           </div>
         )}
         {items.map((item) => (
@@ -122,7 +124,9 @@ export default function History() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-xs text-gray-400">
-                  {new Date(item.timestamp).toLocaleString()}
+                  {new Date(item.timestamp).toLocaleString(
+                    language === 'zh-CN' ? 'zh-CN' : 'en-US',
+                  )}
                 </span>
                 <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
                   {item.pipeline}
@@ -139,13 +143,13 @@ export default function History() {
                 onClick={() => copyItem(item, settings?.defaultOutputFormat ?? 'latex')}
                 className="px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                Copy
+                {t('Copy')}
               </button>
               <button
                 onClick={() => deleteItem(item.id)}
                 className="px-2 py-0.5 text-xs text-red-500 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
               >
-                Delete
+                {t('Delete')}
               </button>
             </div>
           </div>

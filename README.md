@@ -42,18 +42,21 @@ npm run package
 
 ### Local formula recognition (recommended)
 
-1. Open **Settings**, choose **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**, then click **Download MFR-1.5**.
+1. Open **Settings**, choose **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**, then click **Download Local Model**.
 2. The first setup downloads about **120 MB** from the official Hugging Face repository.
-   Downloads show progress, verify SHA-256 hashes, and can be retried. Network access is
-   needed for this step; subsequent recognition works offline.
-3. Click **Save & Test Local Model** to save the selection and run a small formula.
+   Downloads show progress and verify SHA-256 hashes. Network access is needed for this step;
+   subsequent recognition works offline.
+3. The app automatically loads and tests the model, then saves the working configuration. Wait
+   until the model is ready; no Save button is needed.
 4. Snip a single formula with a small margin, paste an image, or drop an image into the window.
 
 No account, API token, Python, GPU, or local language-model server is required. In local mode,
 images are processed on your CPU in a separate background process. Sessions use two CPU threads,
 stay warm for repeated snips, and are released after five minutes idle. There is no automatic
-cloud fallback. New installations default to MFR; existing installations with a configured
-PaddleOCR URL retain their cloud engine and credentials.
+cloud fallback. New installations select Local MFR-1.5 by default. On the first upgrade to
+this version, older settings switch to Local MFR-1.5 once; API credentials and the interface
+language are retained. Later engine choices are remembered across restarts. You can select
+the local engine before downloading its files; recognition becomes available after model setup.
 
 <div align="center">
   <img src="instruct/MFR-example.png" width="50%" style="margin: 0 1.5%;"/>
@@ -64,11 +67,46 @@ layout. Markdown wraps the result in display math; Text preserves the LaTeX sour
 layouts, handwriting and unusual screenshots still need review. Blank/corrupt images, timeouts
 and generation length limits produce errors rather than copied partial output.
 
-Model files live in Electron's user-data directory under
+Automatically downloaded models live in Electron's user-data directory under
 `models/mfr-1.5/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/` (typically
 `~/.config/openmathpix/` on Linux). The pinned model revision and all checksums are in
-`src/services/mfr-model.ts`. To install offline, copy those eight original files from another
-machine into the same directory. The app verifies them on startup.
+`src/services/mfr-model.ts`.
+
+#### Use a model downloaded manually
+
+If a download fails or times out, check that your network or system proxy can access Hugging
+Face and its file download servers, then retry. The app uses the system proxy for downloads.
+You can also download the model with a browser or copy it from another computer:
+
+1. Open the [supported MFR-1.5 revision on Hugging Face](https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/1cef9f0bdcd6a4c63df7de1311fb0894593340cc)
+   and place these eight original files together in one folder:
+
+   ```text
+   encoder_model.onnx
+   decoder_model.onnx
+   config.json
+   generation_config.json
+   preprocessor_config.json
+   special_tokens_map.json
+   tokenizer.json
+   tokenizer_config.json
+   ```
+
+2. In **Settings → Local MFR-1.5**, click **Select Local Model** and select that folder.
+3. The app checks all eight files and their SHA-256 hashes, then loads the model and runs a
+   test formula. It remembers the folder only after these checks succeed. If validation or
+   loading fails, the previous working model remains selected.
+
+The selected folder is used directly, so keep it available and do not move or delete it.
+The saved selection is restored when you restart the app; no API configuration is required.
+
+When the model is ready, **Download Local Model** is disabled. Use **Clear Model Cache** in
+Settings to remove downloaded model files and deactivate the current local model; downloading
+becomes available again. Manually selected external folders and their original files are not deleted.
+
+The interface defaults to **English**. Choose **View → Language → English / 简体中文** to change it immediately.
+Your choice is saved for the next launch. Closing the window offers **Minimize to taskbar**,
+**Quit**, or **Cancel**; minimizing keeps the app and its screenshot shortcut running.
 
 ### Optional PaddleOCR: get your API credentials
 
@@ -93,7 +131,9 @@ machine into the same directory. The app verifies them on startup.
    - Paste your **API URL**.
    - Paste your **Access Token**.
    - Select a **Pipeline** that matches the model you chose on AIStudio.
-4. Click **Save & Test Connection** to save your inputs and verify them with a small test image.
+4. Settings automatically verifies the configuration with a small test image and saves it
+   when successful. Wait for the saved status; if verification fails, correct the fields and
+   the app will try again. The previously working configuration remains active until then.
 
 <div align="center">
   <img src="instruct/1.png" width="50%" style="margin: 0 1.5%;"/>
@@ -127,7 +167,9 @@ After recognition, results appear in four tabs:
 | **Text**     | Plain text with all formatting stripped.                     |
 | **Image**    | The original captured screenshot.                            |
 
-Click **Copy** to copy the active tab. The default format is auto-copied after each recognition.
+**Raw LaTeX source** is expanded by default for each new result. Click its heading to collapse
+or expand the code. Click **Copy** to copy the active tab. The default format is auto-copied
+after each recognition.
 
 ## Pipelines
 
@@ -145,7 +187,7 @@ Click **Copy** to copy the active tab. The default format is auto-copied after e
 
 | Setting        | Default          | Description                                                              |
 | -------------- | ---------------- | ------------------------------------------------------------------------ |
-| OCR Engine     | Local MFR-1.5    | Offline formulas or PaddleOCR API; existing cloud settings are retained. |
+| OCR Engine     | Local MFR-1.5    | Offline formulas or PaddleOCR API; saved API credentials are retained. |
 | API URL        | —               | Your PaddleOCR AIStudio endpoint.                                        |
 | Access Token   | —               | Stored encrypted on disk via safeStorage.                                |
 | Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                               |
@@ -156,9 +198,13 @@ Click **Copy** to copy the active tab. The default format is auto-copied after e
 
 **Self-hosted:** Set the API URL to your local server (e.g. `http://localhost:8080`) and leave the token empty.
 
-Click **Save Settings** to apply changes. Hotkey and theme changes take effect immediately. If a
-hotkey is unavailable, the previous settings and shortcut are retained. Invalid URLs and history
-limits are rejected; an unavailable system keyring is reported when saving a token.
+Settings save automatically and take effect after validation. Text fields apply after a short
+pause in typing or when you leave the field; dropdowns and switches apply on selection. Model
+and API changes show their validation or loading status. Failed changes leave the previous
+working configuration active, and successfully saved settings are restored on restart.
+
+An unavailable hotkey, invalid URL or history limit, model loading failure, or unavailable
+system keyring is reported in Settings so you can correct it without losing the working setup.
 
 ## History
 

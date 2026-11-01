@@ -12,6 +12,12 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
         if (value !== 'mfr' && value !== 'paddleocr') throw new Error('Unsupported OCR engine.');
         updates.ocrEngine = value;
         break;
+      case 'mfrModelPath':
+        if (typeof value !== 'string' || value.includes('\0')) {
+          throw new Error('Local model directory must be a valid path.');
+        }
+        updates.mfrModelPath = value;
+        break;
       case 'apiUrl': {
         if (typeof value !== 'string') throw new Error('API URL must be text.');
         const url = value.trim();
@@ -62,6 +68,10 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
         if (!['light', 'dark', 'system'].includes(value as string))
           throw new Error('Unsupported theme.');
         updates.theme = value as AppSettings['theme'];
+        break;
+      case 'language':
+        if (value !== 'en' && value !== 'zh-CN') throw new Error('Unsupported language.');
+        updates.language = value;
         break;
       case 'historyLimit':
         if (typeof value !== 'number' || !Number.isInteger(value) || value < 10 || value > 500) {

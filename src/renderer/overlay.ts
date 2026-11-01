@@ -1,9 +1,29 @@
-import type { ScreenCapture, SnipSelection } from '../shared/types';
+import type { Language, ScreenCapture, SnipSelection } from '../shared/types';
+import { translate, type TranslationKey } from '../shared/i18n';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const dimLabel = document.getElementById('dimensions')!;
 const instruction = document.getElementById('instruction')!;
+let language: Language = 'en';
+let instructionKey: TranslationKey = 'Drag to select a region. Press Esc to cancel.';
+function applyLanguage(next: Language): void {
+  language = next;
+  document.documentElement.lang = language;
+  instruction.textContent = translate(language, instructionKey);
+}
+let receivedLanguageUpdate = false;
+const unsubscribeLanguage = window.api.onSettingsChanged((settings) => {
+  receivedLanguageUpdate = true;
+  applyLanguage(settings.language);
+});
+const languageReady = window.api
+  .getSettings()
+  .then((settings) => {
+    if (!receivedLanguageUpdate) applyLanguage(settings.language);
+  })
+  .catch(() => applyLanguage(language));
+window.addEventListener('unload', unsubscribeLanguage, { once: true });
 
 let screenImg: HTMLImageElement | null = null;
 let isDrawing = false;
@@ -25,6 +45,7 @@ window.api.onOverlayScreenData(async (screenData: ScreenCapture[]) => {
       image.onerror = () => reject(new Error('Unable to load the captured display.'));
       image.src = capture.dataUrl;
     });
+    await languageReady;
     resizeCanvas();
     window.api.sendOverlayReady();
   } catch (error) {
@@ -122,7 +143,8 @@ canvas.addEventListener('pointerup', (event) => {
   const width = Math.abs(currentX - startX);
   const height = Math.abs(currentY - startY);
   if (width < 10 || height < 10) {
-    instruction.textContent = 'Selection too small. Select a larger area, or press Esc to cancel.';
+    instructionKey = 'Selection too small. Select a larger area, or press Esc to cancel.';
+    instruction.textContent = translate(language, instructionKey);
     instruction.style.display = 'block';
     draw();
     return;

@@ -1,26 +1,36 @@
 import React from 'react';
 import { useAppStore } from '../store';
+import { useI18n } from '../hooks/useI18n';
 
 export default function StatusBar() {
+  const { t, message } = useI18n();
   const { isRecognizing, settings, error, mfrStatus } = useAppStore();
 
   const pipeline = settings?.pipeline ?? '---';
   const local = settings?.ocrEngine === 'mfr';
   const ready = local ? mfrStatus?.state === 'ready' : !!settings?.apiUrl;
-  const checking = local && (!mfrStatus || mfrStatus.state === 'downloading');
+  const checking =
+    local &&
+    (!mfrStatus || ['downloading', 'validating', 'loading', 'clearing'].includes(mfrStatus.state));
   const status = local
     ? !mfrStatus
-      ? 'Checking model...'
+      ? t('Checking model...')
       : mfrStatus.state === 'ready'
-        ? 'Model ready'
+        ? t('Model ready')
         : mfrStatus.state === 'downloading'
-          ? 'Downloading model...'
-          : mfrStatus.state === 'error'
-            ? 'Model unavailable'
-            : 'Model download required'
+          ? t('Downloading model...')
+          : mfrStatus.state === 'validating'
+            ? t('Verifying model...')
+            : mfrStatus.state === 'loading'
+              ? t('Loading model...')
+              : mfrStatus.state === 'clearing'
+                ? t('Clearing model cache...')
+                : mfrStatus.state === 'error'
+                  ? t('Model unavailable')
+                  : t('Model download required')
     : ready
-      ? 'Configured'
-      : 'Not configured';
+      ? t('Configured')
+      : t('Not configured');
 
   return (
     <footer className="flex items-center justify-between px-4 py-1 text-xs border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
@@ -33,13 +43,15 @@ export default function StatusBar() {
           />
           {status}
         </span>
-        <span>{local ? 'Local MFR-1.5' : `Pipeline: ${pipeline}`}</span>
+        <span>{local ? t('Local MFR-1.5') : t('Pipeline: {pipeline}', { pipeline })}</span>
       </div>
 
       <div>
-        {isRecognizing && <span className="animate-pulse">Recognizing...</span>}
-        {error && <span className="text-red-500">{error}</span>}
-        {!isRecognizing && !error && <span>Ready</span>}
+        {isRecognizing && <span className="animate-pulse">{t('Recognizing...')}</span>}
+        {error && <span className="text-red-500">{message(error)}</span>}
+        {!isRecognizing && !error && (
+          <span>{checking ? t('Preparing model...') : ready ? t('Ready') : t('Setup needed')}</span>
+        )}
       </div>
     </footer>
   );
