@@ -67,11 +67,6 @@ layout. Markdown wraps the result in display math; Text preserves the LaTeX sour
 layouts, handwriting and unusual screenshots still need review. Blank/corrupt images, timeouts
 and generation length limits produce errors rather than copied partial output.
 
-Automatically downloaded models live in Electron's user-data directory under
-`models/mfr-1.5/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/` (typically
-`~/.config/openmathpix/` on Linux). The pinned model revision and all checksums are in
-`src/services/mfr-model.ts`.
-
 #### Use a model downloaded manually
 
 If a download fails or times out, check that your network or system proxy can access Hugging
@@ -91,7 +86,6 @@ You can also download the model with a browser or copy it from another computer:
    tokenizer.json
    tokenizer_config.json
    ```
-
 2. In **Settings → Local MFR-1.5**, click **Select Local Model** and select that folder.
 3. The app checks all eight files and their SHA-256 hashes, then loads the model and runs a
    test formula. It remembers the folder only after these checks succeed. If validation or
@@ -185,16 +179,16 @@ after each recognition.
 
 ## Settings
 
-| Setting        | Default          | Description                                                              |
-| -------------- | ---------------- | ------------------------------------------------------------------------ |
+| Setting        | Default          | Description                                                            |
+| -------------- | ---------------- | ---------------------------------------------------------------------- |
 | OCR Engine     | Local MFR-1.5    | Offline formulas or PaddleOCR API; saved API credentials are retained. |
-| API URL        | —               | Your PaddleOCR AIStudio endpoint.                                        |
-| Access Token   | —               | Stored encrypted on disk via safeStorage.                                |
-| Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                               |
-| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture.                                      |
-| Default Output | LaTeX            | Format auto-copied after recognition.                                    |
-| Theme          | System           | Light / Dark / System.                                                   |
-| History Limit  | 100              | Max saved recognitions (10–500).                                        |
+| API URL        | —               | Your PaddleOCR AIStudio endpoint.                                      |
+| Access Token   | —               | Stored encrypted on disk via safeStorage.                              |
+| Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                             |
+| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture.                                    |
+| Default Output | LaTeX            | Format auto-copied after recognition.                                  |
+| Theme          | System           | Light / Dark / System.                                                 |
+| History Limit  | 100              | Max saved recognitions (10–500).                                      |
 
 **Self-hosted:** Set the API URL to your local server (e.g. `http://localhost:8080`) and leave the token empty.
 
