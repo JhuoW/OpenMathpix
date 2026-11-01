@@ -59,7 +59,7 @@ language are retained. Later engine choices are remembered across restarts. You 
 the local engine before downloading its files; recognition becomes available after model setup.
 
 <div align="center">
-  <img src="instruct/MFR-example.png" width="50%" style="margin: 0 1.5%;"/>
+  <img src="instruct/MFR-example1.png" width="50%" style="margin: 0 1.5%;"/>
 </div>
 
 MFR recognizes **formula crops**. It does not parse mixed text/formula pages, tables or document

@@ -46,7 +46,7 @@ npm run package
 本地模式无需账号、API Token、Python、GPU 或本地大语言模型服务。图片由独立后台进程在本机 CPU 上处理，使用两个 CPU 线程。连续截图时会复用已加载的模型，空闲五分钟后释放资源。识别失败时不会自动切换到云端。新安装默认使用 Local MFR-1.5；首次升级至此版本时，旧版配置会一次性切换到本地引擎，已有 API 凭据和界面语言会保留。此后手动选择的引擎会在重启后恢复。尚未下载模型时也可以先选择本地引擎，完成模型配置后即可识别。
 
 <div align="center">
-  <img src="instruct/MFR-example.png" alt="本地 MFR-1.5 设置示例" width="50%" style="margin: 0 1.5%;"/>
+  <img src="instruct/MFR-example1.png" alt="本地 MFR-1.5 设置示例" width="50%" style="margin: 0 1.5%;"/>
 </div>
 
 MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面、表格或文档版面。Markdown 输出会将识别结果包裹为独立公式，Text 输出则保留 LaTeX 源码。复杂排版、手写公式和不常见的截图仍需核对。对于空白或损坏的图片、识别超时及输出超长的情况，应用会显示错误，不会复制不完整的结果。
