@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="image/OpenMathpix-logo.png" alt="OpenMathpix" width="300" />
+  <img src="image/promotion.png" alt="OpenMathpix" width="100%" />
 </p>
 
 <h1 align="center">OpenMathpix</h1>
