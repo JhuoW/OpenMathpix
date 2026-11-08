@@ -193,4 +193,6 @@ MFR 适合识别 **单独截取的公式区域**，不处理图文混排页面�
 
 ## 许可证
 
-MIT
+GNU Affero General Public License v3.0（[AGPL-3.0-only](LICENSE)）。
+
+第三方组件和模型权重保留各自的许可证，详见[第三方声明](THIRD_PARTY_NOTICES.md)。

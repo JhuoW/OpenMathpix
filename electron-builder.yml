@@ -5,6 +5,7 @@ directories:
   output: dist
 files:
   - out/**/*
+  - LICENSE
   - THIRD_PARTY_NOTICES.md
 asarUnpack:
   - node_modules/onnxruntime-node/bin/**/*

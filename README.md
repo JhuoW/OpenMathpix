@@ -227,4 +227,7 @@ Closing the window minimizes to tray. Right-click the tray icon for:
 
 ## License
 
-MIT
+GNU Affero General Public License v3.0 ([AGPL-3.0-only](LICENSE)).
+
+Third-party components and model weights retain their respective licenses. See
+[Third-party notices](THIRD_PARTY_NOTICES.md).

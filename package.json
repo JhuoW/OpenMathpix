@@ -1,6 +1,7 @@
 {
   "name": "openmathpix",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "description": "Open-source formula snipping tool with local Pix2Text MFR and optional PaddleOCR",
   "main": "./out/main/index.js",
   "author": {
