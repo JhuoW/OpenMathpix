@@ -410,22 +410,27 @@ async function main() {
     await page.getByRole('button', { name: 'History', exact: true }).click();
     await page.getByText('MFR-1.5', { exact: true }).first().click();
     await page.locator('.katex').first().waitFor();
-    const rawSource = page.locator('details').filter({
-      has: page.getByText('Raw LaTeX source', { exact: true }),
-    });
-    assert.equal(await rawSource.evaluate((element) => element.open), true);
-    await page.getByText('Raw LaTeX source', { exact: true }).click();
-    assert.equal(await rawSource.evaluate((element) => element.open), false);
-    await page.getByText('Raw LaTeX source', { exact: true }).click();
-    assert.equal(await rawSource.evaluate((element) => element.open), true);
+    const source = page.getByRole('textbox', { name: 'LaTeX source', exact: true });
+    assert.equal(await source.inputValue(), history[0].resultLatex);
     await page.screenshot({ path: path.join(base, 'screenshots/formula.png'), fullPage: true });
-    await page.getByText('Raw LaTeX source', { exact: true }).click();
+    const edited = history[0].resultLatex + '\\,';
+    await source.fill(edited);
+    await page.getByRole('button', { name: 'Reset', exact: true }).waitFor();
+    // Drop immediately: the pending (debounced) history save must not be lost.
     await drop(formula, 'quadratic-again.png');
     await waitForApp(page, async () => (await window.api.getHistory()).length === 2);
     await page.locator('.katex').first().waitFor();
-    assert.equal(await rawSource.evaluate((element) => element.open), true);
+    const [latest, previous] = await page.evaluate(() => window.api.getHistory());
+    assert.equal(await source.inputValue(), latest.resultLatex);
+    assert.equal(await page.getByRole('button', { name: 'Reset', exact: true }).count(), 0);
+    await waitForApp(
+      page,
+      async (expected) => (await window.api.getHistory())[1].resultLatex === expected,
+      edited,
+    );
+    assert.equal(previous.id, history[0].id);
     report.checks.push(
-      'Raw LaTeX source starts expanded, supports manual toggling, and expands for a new recognition with identical LaTeX',
+      'a history entry reopens in the editable LaTeX source, its edit is saved to history, and a new recognition replaces the editor',
     );
     const blank = (await fs.readFile(path.join(root, 'tests/fixtures/mfr/blank.png'))).toString(
       'base64',

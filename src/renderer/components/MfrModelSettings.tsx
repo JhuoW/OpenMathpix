@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
+import type { ModelSource } from '../../shared/types';
 import { useAppStore } from '../store';
 import { settingsSession } from '../settings-session';
 import { cleanSettingsError } from '../settings-autosave';
@@ -27,6 +28,11 @@ export default function MfrModelSettings() {
     mfrStatus?.state === 'loading' ||
     mfrStatus?.state === 'clearing';
   const ready = mfrStatus?.state === 'ready';
+  const modelSource =
+    useSyncExternalStore(settingsSession.subscribe, settingsSession.getSnapshot).draft
+      ?.modelSource ??
+    settings?.modelSource ??
+    'huggingface';
   const error = operationError || mfrStatus?.error;
   const progress =
     mfrStatus && mfrStatus.totalBytes > 0
@@ -158,6 +164,30 @@ export default function MfrModelSettings() {
               'This folder is remembered across restarts. Keep it in this location so the model stays available.',
             )}
           </p>
+        )}
+
+        {!ready && (
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              {t('Download source')}
+            </span>
+            <select
+              value={modelSource}
+              disabled={working}
+              onChange={(event) =>
+                settingsSession.edit('modelSource', event.target.value as ModelSource, true)
+              }
+              className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm disabled:opacity-50"
+            >
+              <option value="huggingface">{t('Hugging Face (official)')}</option>
+              <option value="hf-mirror">{t('hf-mirror.com (mirror)')}</option>
+            </select>
+            <span className="mt-1 block text-xs text-gray-500">
+              {t(
+                'Try the mirror if Hugging Face is slow or unreachable. Every file is verified with SHA-256 either way.',
+              )}
+            </span>
+          </label>
         )}
 
         <div className="flex flex-wrap gap-2">

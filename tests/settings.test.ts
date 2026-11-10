@@ -123,3 +123,23 @@ test('saving retries a shortcut whose startup registration failed', () => {
   );
   assert.deepEqual([...shortcuts.registered], ['Control+Shift+S']);
 });
+
+test('snip, copy and download preferences accept only supported values', () => {
+  assert.deepEqual(
+    validateSettingsUpdates({
+      afterSnip: 'notify',
+      latexCopyStyle: 'mathml',
+      cleanLatex: false,
+      modelSource: 'hf-mirror',
+    }),
+    { afterSnip: 'notify', latexCopyStyle: 'mathml', cleanLatex: false, modelSource: 'hf-mirror' },
+  );
+  for (const updates of [
+    { afterSnip: 'hide' },
+    { latexCopyStyle: 'html' },
+    { cleanLatex: 'yes' },
+    { modelSource: 'https://evil.example' },
+  ]) {
+    assert.throws(() => validateSettingsUpdates(updates));
+  }
+});

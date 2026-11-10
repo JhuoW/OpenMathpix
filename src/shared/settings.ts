@@ -1,4 +1,5 @@
 import type { AppSettings } from './types';
+import { LATEX_COPY_STYLES } from './latex-copy';
 
 /** Validate at the IPC boundary as well as in the settings form. */
 export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
@@ -72,6 +73,26 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
       case 'language':
         if (value !== 'en' && value !== 'zh-CN') throw new Error('Unsupported language.');
         updates.language = value;
+        break;
+      case 'afterSnip':
+        if (value !== 'window' && value !== 'notify') throw new Error('Unsupported snip action.');
+        updates.afterSnip = value;
+        break;
+      case 'latexCopyStyle':
+        if (!(LATEX_COPY_STYLES as readonly unknown[]).includes(value)) {
+          throw new Error('Unsupported LaTeX copy style.');
+        }
+        updates.latexCopyStyle = value as AppSettings['latexCopyStyle'];
+        break;
+      case 'cleanLatex':
+        if (typeof value !== 'boolean') throw new Error('LaTeX cleanup must be on or off.');
+        updates.cleanLatex = value;
+        break;
+      case 'modelSource':
+        if (value !== 'huggingface' && value !== 'hf-mirror') {
+          throw new Error('Unsupported model download source.');
+        }
+        updates.modelSource = value;
         break;
       case 'historyLimit':
         if (typeof value !== 'number' || !Number.isInteger(value) || value < 10 || value > 500) {

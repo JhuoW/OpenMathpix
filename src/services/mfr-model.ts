@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import axios from 'axios';
-import type { MfrStatus } from '../shared/types';
+import type { MfrStatus, ModelSource } from '../shared/types';
 
 export const MFR_REVISION = '1cef9f0bdcd6a4c63df7de1311fb0894593340cc';
 export const MFR_DOWNLOAD_PAGE = `https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`;
@@ -58,8 +58,13 @@ export const MFR_FILES: readonly ModelFile[] = [
 ];
 
 export type FetchModel = (file: ModelFile, signal: AbortSignal) => Promise<Readable>;
-export const mfrFileUrl = (file: ModelFile): string =>
-  `https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/${MFR_REVISION}/${file.name}?download=true`;
+/** Every file is pinned by size and SHA-256, so a mirror cannot alter what is installed. */
+export const MODEL_HOSTS: Record<ModelSource, string> = {
+  huggingface: 'https://huggingface.co',
+  'hf-mirror': 'https://hf-mirror.com',
+};
+export const mfrFileUrl = (file: ModelFile, source: ModelSource = 'huggingface'): string =>
+  `${MODEL_HOSTS[source]}/breezedeus/pix2text-mfr-1.5/resolve/${MFR_REVISION}/${file.name}?download=true`;
 const fetchModel: FetchModel = async (file, signal) => {
   const response = await axios.get<Readable>(mfrFileUrl(file), {
     responseType: 'stream',

@@ -1,13 +1,25 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store';
 import { createRecognizer } from '../recognition';
+import { clipboardText } from '../copy';
+import { localizeError, translate } from '../../shared/i18n';
 
 export const recognizeImage = createRecognizer({
   getState: useAppStore.getState,
   setState: useAppStore.setState,
   recognize: (image) => window.api.recognize(image),
-  copyText: (text) => navigator.clipboard.writeText(text),
+  copyText: (text) => window.api.copyText(text),
+  copyFor: (result, format) => clipboardText(result, format),
   showToast: (message) => useAppStore.getState().showToast(message),
+  // The main process shows a notification only when the window is hidden or unfocused.
+  notify: (outcome) => {
+    const language = useAppStore.getState().settings?.language ?? 'en';
+    const [title, body] =
+      'copied' in outcome
+        ? [translate(language, 'Copied to clipboard'), outcome.copied]
+        : [translate(language, 'Recognition failed'), localizeError(language, outcome.error)];
+    void window.api.notify(title, body).catch(() => undefined);
+  },
 });
 
 // Mount only in App: consumers can import recognizeImage without adding listeners.
@@ -25,6 +37,7 @@ export function useOCR() {
         useAppStore.setState({
           currentImage: null,
           ocrResult: null,
+          baseline: null,
           error: message,
           currentPage: 'result',
         });

@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
-import type { Pipeline, OutputFormat, Theme } from '../../shared/types';
+import type { AfterSnipAction, Pipeline, OutputFormat, Theme } from '../../shared/types';
 import { settingsSession } from '../settings-session';
 import MfrModelSettings from '../components/MfrModelSettings';
+import HotkeyInput from '../components/HotkeyInput';
+import { COPY_STYLE_DESCRIPTIONS } from '../components/CopyStyleBar';
 import { useI18n } from '../hooks/useI18n';
+import { LATEX_COPY_LABELS, LATEX_COPY_STYLES } from '../../shared/latex-copy';
+import type { TranslationKey } from '../../shared/i18n';
 
 const pipelines: { value: Pipeline; label: string; desc: string }[] = [
   { value: 'PP-OCRv5', label: 'PP-OCRv5', desc: 'General text (CJK + English)' },
@@ -18,6 +22,19 @@ const pipelines: { value: Pipeline; label: string; desc: string }[] = [
     desc: 'Upgraded vision-language document parsing',
   },
 ];
+const afterSnipOptions: { value: AfterSnipAction; label: TranslationKey; desc: TranslationKey }[] =
+  [
+    {
+      value: 'window',
+      label: 'Show the result window',
+      desc: 'Bring OpenMathpix to the front to review and edit the result.',
+    },
+    {
+      value: 'notify',
+      label: 'Copy in the background',
+      desc: 'Stay in your current app. The result is copied and a notification appears.',
+    },
+  ];
 const inputClass =
   'mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -202,25 +219,52 @@ export default function Settings() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-4">{t('Preferences')}</h2>
-        <p className="text-xs text-gray-500 mb-4">
-          {t('Change the interface language in View → Language.')}
-        </p>
-        <label className="block mb-3">
+        <h2 className="text-lg font-semibold mb-4">{t('Snipping')}</h2>
+        <div className="mb-4">
           <span className="text-sm font-medium">{t('Snip Hotkey')}</span>
-          <input
-            type="text"
-            aria-label={t('Snip Hotkey')}
+          <HotkeyInput
             value={local.snipHotkey}
-            onChange={(event) => settingsSession.edit('snipHotkey', event.target.value)}
-            onBlur={() => settingsSession.flush('snipHotkey')}
-            className={inputClass}
+            onChange={(accelerator) => settingsSession.edit('snipHotkey', accelerator, true)}
           />
-          <span className="text-xs text-gray-500">{t('e.g. CommandOrControl+Shift+S')}</span>
           <FieldError message={errors.snipHotkey} />
-        </label>
-        <fieldset className="mb-3">
+        </div>
+        <fieldset>
+          <legend className="text-sm font-medium">{t('After a snip')}</legend>
+          <div className="mt-2 space-y-2">
+            {afterSnipOptions.map((option) => (
+              <label
+                key={option.value}
+                className={`flex items-start gap-3 p-2 rounded border cursor-pointer ${
+                  local.afterSnip === option.value
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="afterSnip"
+                  checked={local.afterSnip === option.value}
+                  onChange={() => settingsSession.edit('afterSnip', option.value, true)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <div className="text-sm font-medium">{t(option.label)}</div>
+                  <div className="text-xs text-gray-500">{t(option.desc)}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <FieldError message={errors.afterSnip} />
+        </fieldset>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-4">{t('Output')}</h2>
+        <fieldset className="mb-4">
           <legend className="text-sm font-medium">{t('Default Output Format')}</legend>
+          <p className="text-xs text-gray-500">
+            {t('Opened after recognition and copied automatically.')}
+          </p>
           <div className="flex gap-4 mt-2">
             {(['latex', 'markdown', 'text'] as OutputFormat[]).map((format) => (
               <label key={format} className="flex items-center gap-2 text-sm">
@@ -236,6 +280,54 @@ export default function Settings() {
           </div>
           <FieldError message={errors.defaultOutputFormat} />
         </fieldset>
+        <label className="block mb-4">
+          <span className="text-sm font-medium">{t('LaTeX copy style')}</span>
+          <select
+            value={local.latexCopyStyle}
+            onChange={(event) =>
+              settingsSession.edit(
+                'latexCopyStyle',
+                event.target.value as typeof local.latexCopyStyle,
+                true,
+              )
+            }
+            className={inputClass}
+          >
+            {LATEX_COPY_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {LATEX_COPY_LABELS[style]} — {t(COPY_STYLE_DESCRIPTIONS[style])}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500">
+            {t('Used for automatic copying and the Copy button on the LaTeX tab.')}
+          </span>
+          <FieldError message={errors.latexCopyStyle} />
+        </label>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={local.cleanLatex}
+            onChange={(event) => settingsSession.edit('cleanLatex', event.target.checked, true)}
+            className="mt-1"
+          />
+          <span>
+            <span className="block text-sm font-medium">{t('Tidy local model LaTeX')}</span>
+            <span className="block text-xs text-gray-500">
+              {t(
+                'Removes extra spaces and redundant braces, e.g. b ^ { 2 } becomes b^{2}. The formula itself is unchanged. Applies to new recognitions.',
+              )}
+            </span>
+          </span>
+        </label>
+        <FieldError message={errors.cleanLatex} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-4">{t('Appearance and History')}</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          {t('Change the interface language in View → Language.')}
+        </p>
         <fieldset className="mb-3">
           <legend className="text-sm font-medium">{t('Theme')}</legend>
           <div className="flex gap-4 mt-2">

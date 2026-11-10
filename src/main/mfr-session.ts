@@ -1,14 +1,25 @@
 import type { OCRResult } from '../shared/types';
 import { MFR_REVISION } from '../services/mfr-model';
+import { formulaMarkdown } from '../shared/latex-copy';
 
 export interface WorkerResponse {
   id: number;
   error?: string;
-  result?: { latex: string; [key: string]: unknown };
+  result?: {
+    latex: string;
+    confidence?: number;
+    lowestTokenProbability?: number;
+    [key: string]: unknown;
+  };
+}
+
+export interface MfrSessionOptions {
+  /** Applied to model output; the unmodified string is kept in rawResponse.rawLatex. */
+  formatLatex?: (latex: string) => string;
 }
 
 export interface MfrWorkerTransport {
-  send: (request: { id: number; modelDir: string; imageBase64: string }) => void;
+  send: (request: { id: number; modelDir: string; imageBase64?: string }) => void;
   kill: () => void;
   onMessage: (listener: (response: WorkerResponse) => void) => void;
   onFailure: (listener: (error: Error) => void) => void;
@@ -23,6 +34,7 @@ export class MfrSession {
   private idleTimer?: ReturnType<typeof setTimeout>;
   private pending?: {
     id: number;
+    formatLatex: (latex: string) => string;
     resolve: (result: OCRResult) => void;
     reject: (error: Error) => void;
     timer: ReturnType<typeof setTimeout>;
@@ -51,12 +63,18 @@ export class MfrSession {
       else if (!message.result?.latex) {
         task.reject(new Error('Local model returned no formula.'));
       } else {
-        const { latex } = message.result;
+        const { latex: rawLatex, confidence, lowestTokenProbability } = message.result;
+        const latex = task.formatLatex(rawLatex) || rawLatex;
         task.resolve({
           latex,
-          markdown: `$$\n${latex}\n$$`,
+          markdown: formulaMarkdown(latex),
           text: latex,
-          rawResponse: { engine: 'MFR-1.5', revision: MFR_REVISION, ...message.result },
+          kind: 'formula',
+          confidence:
+            typeof confidence === 'number' && typeof lowestTokenProbability === 'number'
+              ? { average: confidence, lowest: lowestTokenProbability }
+              : undefined,
+          rawResponse: { engine: 'MFR-1.5', revision: MFR_REVISION, ...message.result, rawLatex },
         });
       }
       this.afterRequest();
@@ -90,7 +108,20 @@ export class MfrSession {
     }
   }
 
-  recognize(imageBase64: string): Promise<OCRResult> {
+  /** Start the worker and load the model ahead of a recognition request. */
+  warmup(): void {
+    if (this.retired || this.pending) return;
+    clearTimeout(this.idleTimer);
+    try {
+      this.start().send({ id: 0, modelDir: this.directory });
+    } catch {
+      // Warm-up is an optimization; recognition reports any real failure.
+      return;
+    }
+    this.afterRequest();
+  }
+
+  recognize(imageBase64: string, options: MfrSessionOptions = {}): Promise<OCRResult> {
     if (this.retired) return Promise.reject(new Error('This model session has been replaced.'));
     if (this.pending)
       return Promise.reject(new Error('Local recognition is already running. Please wait.'));
@@ -108,7 +139,13 @@ export class MfrSession {
           new Error('Local recognition timed out. Please crop a smaller formula and retry.'),
         );
       }, this.timeoutMs);
-      this.pending = { id, resolve, reject, timer };
+      this.pending = {
+        id,
+        formatLatex: options.formatLatex ?? ((latex) => latex),
+        resolve,
+        reject,
+        timer,
+      };
       try {
         worker.send({ id, modelDir: this.directory, imageBase64 });
       } catch (error) {

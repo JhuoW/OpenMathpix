@@ -3,6 +3,7 @@ import type { AppSettings, OCRResult, OutputFormat } from '../shared/types';
 interface RecognitionState {
   currentImage: string | null;
   ocrResult: OCRResult | null;
+  baseline?: OCRResult | null;
   isRecognizing: boolean;
   error: string | null;
   activeTab: OutputFormat | 'image';
@@ -16,7 +17,14 @@ interface RecognitionDependencies {
   recognize: (image: string) => Promise<OCRResult>;
   copyText: (text: string) => Promise<void>;
   showToast: (message: string) => void;
+  /** Clipboard text for a format; may apply a LaTeX copy style such as MathML. */
+  copyFor?: (result: OCRResult, format: OutputFormat) => string;
+  /** Report the outcome outside the window, e.g. as a system notification. */
+  notify?: (outcome: { copied: string } | { error: string }) => void;
 }
+
+const stripRemotePrefix = (message: string) =>
+  message.replace(/^Error invoking remote method 'ocr:recognize': (?:Error: )?/, '');
 
 // All input paths (capture, paste, drop and retry) share the same lifecycle.
 export function createRecognizer(deps: RecognitionDependencies) {
@@ -29,6 +37,7 @@ export function createRecognizer(deps: RecognitionDependencies) {
     deps.setState({
       currentImage: imageBase64,
       ocrResult: null,
+      baseline: null,
       error: null,
       isRecognizing: true,
       currentPage: 'result',
@@ -36,12 +45,21 @@ export function createRecognizer(deps: RecognitionDependencies) {
 
     try {
       const result = await deps.recognize(imageBase64);
-      deps.setState({ ocrResult: result, activeTab: format });
+      deps.setState({ ocrResult: result, baseline: result, activeTab: format });
       const notifications: string[] = [];
-      if (result[format]) {
+      let text = result[format];
+      try {
+        if (deps.copyFor) text = deps.copyFor(result, format);
+      } catch {
+        // e.g. LaTeX that KaTeX cannot convert to MathML: plain LaTeX is still useful.
+        notifications.push('Could not apply the copy style; copied plain LaTeX instead.');
+      }
+      let copied = '';
+      if (text) {
         try {
-          await deps.copyText(result[format]);
-          notifications.push('Copied!');
+          await deps.copyText(text);
+          copied = text;
+          notifications.unshift('Copied!');
         } catch {
           // Clipboard access can fail independently of a successful OCR request.
           notifications.push('Recognized successfully. Copy failed; use the Copy button to retry.');
@@ -49,11 +67,13 @@ export function createRecognizer(deps: RecognitionDependencies) {
       }
       if (result.warning) notifications.push(result.warning);
       if (notifications.length) deps.showToast(notifications.join(' '));
+      if (copied) deps.notify?.({ copied });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Recognition failed';
-      deps.setState({
-        error: message.replace(/^Error invoking remote method 'ocr:recognize': (?:Error: )?/, ''),
-      });
+      const message = stripRemotePrefix(
+        error instanceof Error ? error.message : 'Recognition failed',
+      );
+      deps.setState({ error: message });
+      deps.notify?.({ error: message });
     } finally {
       deps.setState({ isRecognizing: false });
     }

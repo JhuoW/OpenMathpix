@@ -115,7 +115,7 @@ or Xvfb after `npm test` and `npm run build`. The `--packaged` option tests the 
 inside the Linux unpacked distribution produced by `npx electron-builder --linux --dir`.
 The desktop smoke script checks automatic settings persistence across navigation and restart,
 manual model selection and cancellation, missing/corrupt model rollback, real inference from
-the selected folder, and the default expansion and manual toggling of Raw LaTeX source. Only
+the selected folder, and that history entries reopen in the editable LaTeX source. Only
 the native folder picker's response is mocked; the app's validation and model loading run
 normally. Migration mode checks the one-time switch from old PaddleOCR settings to local MFR,
 with API credentials retained. After that migration, explicitly saved engine and language
@@ -136,7 +136,19 @@ node scripts/mfr/download-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
   --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
 node scripts/mfr/ux-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
   --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
+node scripts/mfr/features-smoke.cjs --model-dir "$MFR_MODEL_DIR" \
+  --playwright-module /tmp/openmathpix-ui-test/node_modules/playwright-core
 ```
+
+The feature smoke test snips real desktop regions and checks the tidied LaTeX, every copy
+style on the system clipboard, source editing saved to history, history search and copy,
+drag/drop, paste, the error view, the tidy setting, right-click and Escape cancel, model
+warm-up, background copy with notifications (including a hidden window and a failure), the
+hotkey recorder and an unavailable shortcut, PaddleOCR single-formula and document results
+from a local fake server, navigation blocking and CSP, the mirror source, restart persistence
+and recovery from a corrupt history file. Notifications and external URLs are recorded
+instead of shown. Access tokens are not tested because Xvfb has no system keyring. Minimize
+restore is skipped without a window manager.
 
 The download smoke test supplies simulated timeout and streaming network responses using
 the real model files. It checks manual recovery, blocked duplicate downloads, cancelled cleanup,

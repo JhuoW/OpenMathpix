@@ -3,6 +3,7 @@ import { IPC } from '../shared/types';
 import type {
   AppSettings,
   HistoryItem,
+  HistoryUpdate,
   OCRResult,
   MfrStatus,
   ScreenCapture,
@@ -79,9 +80,16 @@ const api = {
   clearHistory: (): Promise<void> => ipcRenderer.invoke(IPC.CLEAR_HISTORY),
   searchHistory: (query: string): Promise<HistoryItem[]> =>
     ipcRenderer.invoke(IPC.SEARCH_HISTORY, query),
+  updateHistoryItem: (id: number, updates: HistoryUpdate): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.UPDATE_HISTORY_ITEM, id, updates),
 
-  // Clipboard paste
+  // Clipboard
   pasteImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.PASTE_IMAGE),
+  copyText: (text: string): Promise<void> => ipcRenderer.invoke(IPC.COPY_TEXT, text),
+
+  // Notifications appear only while the main window is hidden or unfocused.
+  notify: (title: string, body: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.NOTIFY, title, body),
 };
 
 contextBridge.exposeInMainWorld('api', api);

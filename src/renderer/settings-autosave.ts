@@ -8,7 +8,11 @@ export type SettingsGroup =
   | 'defaultOutputFormat'
   | 'historyLimit'
   | 'theme'
-  | 'language';
+  | 'language'
+  | 'afterSnip'
+  | 'latexCopyStyle'
+  | 'cleanLatex'
+  | 'modelSource';
 
 const recognitionKeys = ['ocrEngine', 'apiUrl', 'accessToken', 'pipeline'] as const;
 const groupFor = (key: EditableSetting): SettingsGroup =>

@@ -1,13 +1,27 @@
-import { BrowserWindow, desktopCapturer, screen, ipcMain, nativeImage } from 'electron';
+import {
+  BrowserWindow,
+  desktopCapturer,
+  screen,
+  ipcMain,
+  nativeImage,
+  type NativeImage,
+} from 'electron';
 import path from 'path';
 import { IPC } from '../shared/types';
-import type { ScreenCapture, SnipSelection } from '../shared/types';
+import type { AfterSnipAction, ScreenCapture, SnipSelection } from '../shared/types';
 import { normalizedCropBounds } from './capture-geometry';
 
 interface Overlay {
   window: BrowserWindow;
   capture: ScreenCapture;
+  /** The lossless capture; the overlay only displays a faster JPEG copy. */
+  image: NativeImage;
   ready: boolean;
+}
+
+export interface SnipOptions {
+  /** Read when the snip finishes, so a settings change during selection applies. */
+  afterSnip: () => AfterSnipAction;
 }
 
 let snipInProgress = false;
@@ -16,9 +30,14 @@ export function isSnipInProgress(): boolean {
   return snipInProgress;
 }
 
-export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
+export async function startSnip(
+  mainWindow: BrowserWindow,
+  options: SnipOptions = { afterSnip: () => 'window' },
+): Promise<void> {
   if (snipInProgress || mainWindow.isDestroyed()) return;
   snipInProgress = true;
+  // A snip started from the tray or hotkey must not pop up a window that was hidden.
+  const wasVisible = mainWindow.isVisible() && !mainWindow.isMinimized();
 
   // Each display has its own overlay and normalized coordinate space.
   const overlays = new Map<number, Overlay>();
@@ -39,11 +58,16 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
     }
     overlays.clear();
     snipInProgress = false;
-    if (!mainWindow.isDestroyed()) {
+    if (mainWindow.isDestroyed()) return;
+    if (imageBase64 && options.afterSnip() === 'window') {
+      if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
-      if (imageBase64) mainWindow.webContents.send(IPC.SNIP_CAPTURED, imageBase64);
+    } else if (wasVisible) {
+      // Cancelled, or recognized in the background: restore without taking focus away.
+      mainWindow.showInactive();
     }
+    if (imageBase64) mainWindow.webContents.send(IPC.SNIP_CAPTURED, imageBase64);
   }
 
   function fail(error: unknown): void {
@@ -51,6 +75,10 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
     console.error('Snip failed:', error);
     finish();
     if (!mainWindow.isDestroyed()) {
+      // Capture failures need the window: they usually require a permission change.
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
       mainWindow.webContents.send(
         IPC.SNIP_ERROR,
         error instanceof Error ? error.message : 'Screen capture failed. Please try again.',
@@ -77,7 +105,7 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
     const overlay = overlays.get(event.sender.id);
     if (!overlay || !overlay.ready || finished) return;
     try {
-      const croppedBase64 = cropNormalized(overlay.capture, selection);
+      const croppedBase64 = cropNormalized(overlay.image, selection);
       if (!croppedBase64) {
         fail(new Error('Invalid or empty selection. Please select a larger area.'));
         return;
@@ -131,7 +159,9 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
         (displays.length === 1 && sources.length === 1 ? sources[0] : undefined);
       if (!source || source.thumbnail.isEmpty()) continue;
       const capture: ScreenCapture = {
-        dataUrl: source.thumbnail.toDataURL(),
+        // JPEG encodes several times faster than PNG for a full display. It is only shown
+        // behind the selection; the recognized region is cropped from the lossless image.
+        dataUrl: `data:image/jpeg;base64,${source.thumbnail.toJPEG(92).toString('base64')}`,
         bounds: display.bounds,
         displayId: String(display.id),
       };
@@ -153,7 +183,12 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
           contextIsolation: true,
         },
       });
-      overlays.set(window.webContents.id, { window, capture, ready: false });
+      overlays.set(window.webContents.id, {
+        window,
+        capture,
+        image: source.thumbnail,
+        ready: false,
+      });
       window.setAlwaysOnTop(true, 'screen-saver');
       window.on('closed', () => finish());
       window.webContents.on('render-process-gone', () => {
@@ -191,8 +226,7 @@ export async function startSnip(mainWindow: BrowserWindow): Promise<void> {
   }
 }
 
-function cropNormalized(capture: ScreenCapture, selection: SnipSelection): string | null {
-  const image = nativeImage.createFromDataURL(capture.dataUrl);
+function cropNormalized(image: NativeImage, selection: SnipSelection): string | null {
   if (image.isEmpty()) return null;
   const bounds = normalizedCropBounds(selection, image.getSize());
   if (!bounds) return null;

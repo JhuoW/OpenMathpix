@@ -15,6 +15,7 @@ import { MFR_TEST_IMAGE } from '../shared/mfr-test-image';
 import { getSettings } from './store';
 import { MfrSession } from './mfr-session';
 import { stageModelCacheRemoval, type StagedModelCache } from '../services/mfr-cache';
+import { cleanLatex } from '../shared/latex-format';
 
 let manager: MfrModelManager | undefined;
 let session: MfrSession | undefined;
@@ -46,7 +47,7 @@ const fetchModel: FetchModel = async (file, signal) => {
   const connectTimeout = new AbortController();
   const timer = setTimeout(() => connectTimeout.abort(), 60_000);
   try {
-    const response = await net.fetch(mfrFileUrl(file), {
+    const response = await net.fetch(mfrFileUrl(file, getSettings().modelSource), {
       signal: AbortSignal.any([signal, connectTimeout.signal]),
     });
     if (!response.ok || !response.body) {
@@ -346,11 +347,24 @@ export async function recognizeMfr(imageBase64: string): Promise<OCRResult> {
       const directory = await activeManager.ensureReady();
       if (activeManager !== manager) continue;
       session ??= createSession(directory);
-      return await session.recognize(imageBase64);
+      return await session.recognize(imageBase64, {
+        formatLatex: getSettings().cleanLatex ? cleanLatex : undefined,
+      });
     }
   } finally {
     recognizing = false;
   }
+}
+
+/** Start loading the active model while the user is still selecting a region. */
+export async function warmMfr(): Promise<void> {
+  if (getSettings().ocrEngine !== 'mfr' || changingModel || clearingModel || recognizing) return;
+  const activeManager = getMfrManager();
+  if ((await activeManager.getStatus()).state !== 'ready') return;
+  // The model may have been replaced while its status was read.
+  if (activeManager !== manager || changingModel || clearingModel || recognizing) return;
+  session ??= createSession(activeManager.directory);
+  session.warmup();
 }
 
 export function disposeMfr(): void {

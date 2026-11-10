@@ -26,8 +26,11 @@ export const IPC = {
   DELETE_HISTORY_ITEM: 'history:delete',
   CLEAR_HISTORY: 'history:clear',
   SEARCH_HISTORY: 'history:search',
+  UPDATE_HISTORY_ITEM: 'history:update',
 
   PASTE_IMAGE: 'clipboard:paste-image',
+  COPY_TEXT: 'clipboard:write-text',
+  NOTIFY: 'app:notify',
 } as const;
 
 export type Pipeline = 'PP-OCRv5' | 'PP-StructureV3' | 'PaddleOCR-VL' | 'PaddleOCR-VL-1.5';
@@ -35,6 +38,11 @@ export type OutputFormat = 'latex' | 'markdown' | 'text';
 export type Theme = 'light' | 'dark' | 'system';
 export type OCREngine = 'paddleocr' | 'mfr';
 export type Language = 'en' | 'zh-CN';
+/** What happens after a snip: bring the window forward, or copy and notify in the background. */
+export type AfterSnipAction = 'window' | 'notify';
+/** How LaTeX is wrapped when copied. */
+export type LatexCopyStyle = 'plain' | 'inline' | 'display' | 'bracket' | 'equation' | 'mathml';
+export type ModelSource = 'huggingface' | 'hf-mirror';
 
 export interface MfrStatus {
   state:
@@ -63,6 +71,11 @@ export interface AppSettings {
   historyLimit: number;
   theme: Theme;
   language: Language;
+  afterSnip: AfterSnipAction;
+  latexCopyStyle: LatexCopyStyle;
+  /** Tidy tokenized MFR output (spacing, redundant braces) without changing the formula. */
+  cleanLatex: boolean;
+  modelSource: ModelSource;
 }
 
 export interface OCRResult {
@@ -71,7 +84,17 @@ export interface OCRResult {
   text: string;
   rawResponse: unknown;
   warning?: string;
+  /** A single formula (Markdown and text derive from LaTeX) or a parsed document. */
+  kind?: 'formula' | 'document';
+  /** Local model token probabilities; absent for cloud results. */
+  confidence?: { average: number; lowest: number };
+  /** The history entry that stores this result, when saving succeeded. */
+  historyId?: number;
 }
+
+export type HistoryUpdate = Partial<
+  Pick<HistoryItem, 'resultLatex' | 'resultMarkdown' | 'resultText'>
+>;
 
 export interface HistoryItem {
   id: number;

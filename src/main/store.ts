@@ -13,6 +13,10 @@ const defaults = {
   historyLimit: 100,
   theme: 'system' as const,
   language: 'en' as const,
+  afterSnip: 'window' as const,
+  latexCopyStyle: 'plain' as const,
+  cleanLatex: true,
+  modelSource: 'huggingface' as const,
   encryptedToken: '',
 };
 
@@ -51,6 +55,10 @@ export function getSettings(): AppSettings {
     historyLimit: store.get('historyLimit') as number,
     theme: store.get('theme') as AppSettings['theme'],
     language: store.get('language', 'en'),
+    afterSnip: store.get('afterSnip', 'window'),
+    latexCopyStyle: store.get('latexCopyStyle', 'plain'),
+    cleanLatex: store.get('cleanLatex', true),
+    modelSource: store.get('modelSource', 'huggingface'),
   };
 }
 

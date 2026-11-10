@@ -6,7 +6,7 @@ const ctx = canvas.getContext('2d')!;
 const dimLabel = document.getElementById('dimensions')!;
 const instruction = document.getElementById('instruction')!;
 let language: Language = 'en';
-let instructionKey: TranslationKey = 'Drag to select a region. Press Esc to cancel.';
+let instructionKey: TranslationKey = 'Drag to select a region. Press Esc or right-click to cancel.';
 function applyLanguage(next: Language): void {
   language = next;
   document.documentElement.lang = language;
@@ -168,7 +168,13 @@ function resetSelection(): void {
 
 canvas.addEventListener('pointercancel', resetSelection);
 canvas.addEventListener('lostpointercapture', resetSelection);
-canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+// Right-click abandons the current rectangle, or the whole snip when nothing is selected.
+canvas.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  if (submitted) return;
+  if (isDrawing) resetSelection();
+  else window.api.cancelOverlay();
+});
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') window.api.cancelOverlay();
 });

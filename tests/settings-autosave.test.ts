@@ -15,6 +15,10 @@ const initial: AppSettings = {
   historyLimit: 100,
   theme: 'system',
   language: 'en',
+  afterSnip: 'window',
+  latexCopyStyle: 'plain',
+  cleanLatex: true,
+  modelSource: 'huggingface',
 };
 
 function deferred<T>() {

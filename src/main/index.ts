@@ -7,6 +7,7 @@ import {
   nativeImage,
   nativeTheme,
   dialog,
+  shell,
 } from 'electron';
 import path from 'path';
 import { getSettings, setSettings } from './store';
@@ -16,7 +17,8 @@ import { saveWithShortcut } from './shortcuts';
 import { initDb } from './db';
 import { registerIpcHandlers } from './ipc';
 import { startSnip } from './capture';
-import { disposeMfr, getMfrStatus, prepareMfrModel, prepareClearMfrModel } from './mfr';
+import { disposeMfr, getMfrStatus, prepareMfrModel, prepareClearMfrModel, warmMfr } from './mfr';
+import { guardNavigation } from './navigation';
 import { createSettingsService } from './settings-service';
 import { testConnection } from '../services/paddleocr';
 import { createWindowCloseHandler } from './window-close';
@@ -47,6 +49,14 @@ function showMainWindow(): void {
 }
 
 app.on('second-instance', showMainWindow);
+
+// Every window, including snip overlays, stays on the application's own pages.
+app.on('web-contents-created', (_event, contents) => {
+  guardNavigation(contents, (url) => shell.openExternal(url));
+});
+
+// Windows shows notifications only for an application with an explicit identity.
+if (process.platform === 'win32') app.setAppUserModelId('com.openmathpix.app');
 
 function getIconPath(): string {
   // In production, icon is in build/ relative to the app root (resources/app.asar)
@@ -146,8 +156,15 @@ function refreshNativeMenus(): void {
   menuLanguage = language;
 }
 
+function snip(): Promise<void> {
+  if (!mainWindow) return Promise.resolve();
+  // Load the model while the user selects a region; the first recognition is then faster.
+  void warmMfr().catch(() => undefined);
+  return startSnip(mainWindow, { afterSnip: () => getSettings().afterSnip });
+}
+
 function triggerSnip(): void {
-  if (mainWindow) void startSnip(mainWindow);
+  void snip();
 }
 
 function registerGlobalShortcut(): void {
@@ -220,7 +237,10 @@ app.whenReady().then(() => {
     },
   });
   updateSettings = settingsService.update;
-  registerIpcHandlers(mainWindow, settingsService.update, settingsService.clearModel);
+  registerIpcHandlers(mainWindow, settingsService.update, settingsService.clearModel, {
+    snip,
+    showMainWindow,
+  });
   createTray();
   refreshNativeMenus();
   registerGlobalShortcut();

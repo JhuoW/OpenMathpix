@@ -128,3 +128,33 @@ test('history warning is shown even if the preferred output format is empty', as
   assert.deepEqual(app.copies, []);
   assert.deepEqual(app.toasts, [warnedResult.warning]);
 });
+
+test('the chosen copy style is used, and failures fall back to the plain result', async () => {
+  const styled = setup({ copyFor: (value) => `[${value.latex}]` });
+  await styled.recognize('image');
+  assert.deepEqual(styled.copies, [`[${result.latex}]`]);
+
+  const fallback = setup({
+    copyFor: () => {
+      throw new Error('KaTeX cannot convert this formula');
+    },
+  });
+  await fallback.recognize('image');
+  assert.deepEqual(fallback.copies, [result.latex]);
+  assert.match(fallback.toasts[0], /^Copied! Could not apply the copy style/);
+});
+
+test('background recognition reports the copied text or the error', async () => {
+  const outcomes: unknown[] = [];
+  const ok = setup({ notify: (outcome) => outcomes.push(outcome) });
+  await ok.recognize('image');
+  const failing = setup({
+    recognize: async () => {
+      throw new Error("Error invoking remote method 'ocr:recognize': Error: Model missing");
+    },
+    notify: (outcome) => outcomes.push(outcome),
+  });
+  await failing.recognize('image');
+  assert.deepEqual(outcomes, [{ copied: result.latex }, { error: 'Model missing' }]);
+  assert.equal(failing.state().error, 'Model missing');
+});

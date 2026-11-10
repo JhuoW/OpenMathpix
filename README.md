@@ -45,14 +45,17 @@ npm run package
 1. Open **Settings**, choose **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**, then click **Download Local Model**.
 2. The first setup downloads about **120 MB** from the official Hugging Face repository.
    Downloads show progress and verify SHA-256 hashes. Network access is needed for this step;
-   subsequent recognition works offline.
+   subsequent recognition works offline. If Hugging Face is slow or unreachable, switch
+   **Download source** to **hf-mirror.com (mirror)**; every file is verified against the same
+   pinned SHA-256 hashes, so a mirror cannot change what is installed.
 3. The app automatically loads and tests the model, then saves the working configuration. Wait
    until the model is ready; no Save button is needed.
 4. Snip a single formula with a small margin, paste an image, or drop an image into the window.
 
 No account, API token, Python, GPU, or local language-model server is required. In local mode,
 images are processed on your CPU in a separate background process. Sessions use two CPU threads,
-stay warm for repeated snips, and are released after five minutes idle. There is no automatic
+start loading the model as soon as a snip begins, stay warm for repeated snips, and are
+released after five minutes idle. There is no automatic
 cloud fallback. New installations select Local MFR-1.5 by default. On the first upgrade to
 this version, older settings switch to Local MFR-1.5 once; API credentials and the interface
 language are retained. Later engine choices are remembered across restarts. You can select
@@ -63,8 +66,12 @@ the local engine before downloading its files; recognition becomes available aft
 </div>
 
 MFR recognizes **formula crops**. It does not parse mixed text/formula pages, tables or document
-layout. Markdown wraps the result in display math; Text preserves the LaTeX source. Complex
-layouts, handwriting and unusual screenshots still need review. Blank/corrupt images, timeouts
+layout. Markdown wraps the result in display math; Text preserves the LaTeX source. By default
+the model's tokenized output (`b ^ { 2 }`) is tidied into compact LaTeX (`b^{2}`): extra spaces,
+redundant braces and trailing row breaks are removed and `\left( \begin{matrix}` becomes
+`pmatrix`, without changing the rendered formula. Turn off **Tidy local model LaTeX** in Settings
+to keep the raw output. When the model was unsure about a symbol, the result shows a reminder
+to check it. Complex layouts, handwriting and unusual screenshots still need review. Blank/corrupt images, timeouts
 and generation length limits produce errors rather than copied partial output.
 
 #### Use a model downloaded manually
@@ -137,13 +144,17 @@ Your choice is saved for the next launch. Closing the window offers **Minimize t
 
 #### Screen snip
 
-You can click **Snip** button in the toolbar and then click **New Snip** button to dim the screen.
+Click **New Snip** in the toolbar, or press the snip hotkey from any application, to dim the screen.
 
 <div align="center">
   <img src="instruct/2.png" width="50%" style="margin: 0 1.5%;"/>
 </div>
 
-You can click and drag to select a region. Release to capture.
+Click and drag to select a region, then release to capture. Press `Esc` or right-click to cancel.
+
+After a snip, OpenMathpix either shows the result window (default) or, with **After a snip →
+Copy in the background**, stays out of your way: the result is copied in your chosen format and a
+system notification shows what was copied. Click the notification to open the result.
 
 <div align="center">
   <img src="instruct/3.png" width="50%" style="margin: 0 1.5%;"/>
@@ -156,14 +167,18 @@ After recognition, results appear in four tabs:
 
 | Tab                | Description                                                  |
 | ------------------ | ------------------------------------------------------------ |
-| **LaTeX**    | Extracted math rendered via KaTeX, with copyable raw source. |
-| **Markdown** | Structured output (headings, tables, inline math).           |
-| **Text**     | Plain text with all formatting stripped.                     |
-| **Image**    | The original captured screenshot.                            |
+| **LaTeX**    | The snip, the formula rendered via KaTeX, and its editable LaTeX source. |
+| **Markdown** | Structured output (headings, tables, inline math) with editable source.  |
+| **Text**     | Plain text with all formatting stripped, editable.                       |
+| **Image**    | The original captured screenshot.                                        |
 
-**Raw LaTeX source** is expanded by default for each new result. Click its heading to collapse
-or expand the code. Click **Copy** to copy the active tab. The default format is auto-copied
-after each recognition.
+Correct a misread symbol directly in the source: the preview updates as you type, copies use your
+version, and the change is saved to history. **Reset** restores the recognized result.
+
+Click **Copy** to copy the active tab; the default format is also copied automatically after each
+recognition. On the LaTeX tab, **Copy as** copies the formula as plain LaTeX, `$…$`, `$$…$$`,
+`\[…\]`, an `equation` environment, or **MathML**, which pastes into Microsoft Word as an editable
+equation. Choose the style used for automatic copying in **Settings → LaTeX copy style**.
 
 ## Pipelines
 
@@ -185,8 +200,12 @@ after each recognition.
 | API URL        | —               | Your PaddleOCR AIStudio endpoint.                                      |
 | Access Token   | —               | Stored encrypted on disk via safeStorage.                              |
 | Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                             |
-| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture.                                    |
-| Default Output | LaTeX            | Format auto-copied after recognition.                                  |
+| Download source | Hugging Face    | Hugging Face or the hf-mirror.com mirror for the local model.          |
+| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture. Click the field and press keys.    |
+| After a snip   | Show window      | Show the result window, or copy in the background with a notification. |
+| Default Output | LaTeX            | Tab opened and format auto-copied after recognition.                   |
+| LaTeX copy style | LaTeX          | Plain, `$…$`, `$$…$$`, `\[…\]`, `equation`, or MathML (Word).         |
+| Tidy local model LaTeX | On       | Compact the local model's tokenized LaTeX without changing the formula. |
 | Theme          | System           | Light / Dark / System.                                                 |
 | History Limit  | 100              | Max saved recognitions (10–500).                                      |
 
@@ -202,7 +221,7 @@ system keyring is reported in Settings so you can correct it without losing the 
 
 ## History
 
-Click **History** in the toolbar to browse past recognitions. Each entry shows a thumbnail, timestamp, and preview. Use the search bar to filter, or click an entry to re-open its result.
+Click **History** in the toolbar to browse past recognitions. Each entry shows a thumbnail, timestamp, and a rendered preview of the formula. Use the search bar to filter, copy an entry directly, or click it to re-open and keep editing its result.
 
 <div align="center">
   <img src="instruct/5.png" width="50%" style="margin: 0 1.5%;"/>
@@ -223,7 +242,7 @@ Closing the window minimizes to tray. Right-click the tray icon for:
 | ---------------- | --------------------------- |
 | `Ctrl+Shift+S` | Screen snip (global)        |
 | `Ctrl+V`       | Paste image for recognition |
-| `Escape`       | Cancel snip                 |
+| `Escape` / right-click | Cancel snip         |
 
 ## License
 

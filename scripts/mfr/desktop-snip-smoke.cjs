@@ -93,7 +93,8 @@ const packaged = process.argv.includes('--packaged');
     await fixture.waitForFunction(() => document.querySelector('img')?.complete);
     await main.bringToFront();
     const overlayPromise = app.waitForEvent('window');
-    await main.getByRole('button', { name: 'New Snip', exact: true }).click();
+    // The empty result page has its own New Snip button; use the toolbar's.
+    await main.locator('header').getByRole('button', { name: 'New Snip', exact: true }).click();
     const overlay = await overlayPromise;
     report.overlay = await overlay.evaluate(() => ({
       width: innerWidth,
@@ -125,11 +126,14 @@ const packaged = process.argv.includes('--packaged');
       'cropped screenshot is recognized through MFR utility process',
       'KaTeX formula visible and MFR history saved',
     );
-    const rawSource = main.locator('details').filter({
-      has: main.getByText('Raw LaTeX source', { exact: true }),
-    });
-    assert.equal(await rawSource.evaluate((element) => element.open), true);
-    report.checks.push('Raw LaTeX source is expanded by default after a real screen capture');
+    const source = main.getByRole('textbox', { name: 'LaTeX source', exact: true });
+    assert.equal(await source.inputValue(), history[0].resultLatex);
+    assert.equal(
+      history[0].resultLatex,
+      'x=\\frac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}',
+      'local model output is tidied by default',
+    );
+    report.checks.push('Editable LaTeX source shows the tidied result after a real screen capture');
     await main.screenshot({ path: base + '/result.png' });
     report.ok = true;
   } catch (error) {

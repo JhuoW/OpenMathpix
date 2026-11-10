@@ -4,16 +4,31 @@ import { createMfrEngine, type MfrEngine } from '../services/mfr-engine';
 interface Request {
   id: number;
   modelDir: string;
-  imageBase64: string;
+  /** Omitted for a warm-up request, which only loads the model and sends no reply. */
+  imageBase64?: string;
 }
-let engine: MfrEngine | undefined;
+let engine: Promise<MfrEngine> | undefined;
 let busy = false;
+
+function loadEngine(modelDir: string): Promise<MfrEngine> {
+  engine ??= createMfrEngine(modelDir).catch((error: unknown) => {
+    // A failed load must be retried, and reported, by the next recognition request.
+    engine = undefined;
+    throw error;
+  });
+  return engine;
+}
 const send = (message: unknown) => {
   if (process.parentPort) process.parentPort.postMessage(message);
   else if (process.send) process.send(message);
 };
 
 async function handle(request: Request): Promise<void> {
+  if (request.imageBase64 === undefined) {
+    // Overlap model loading with the user's selection; errors surface on recognition.
+    void loadEngine(request.modelDir).catch(() => undefined);
+    return;
+  }
   if (busy) {
     send({ id: request.id, error: 'Local recognition is already running.' });
     return;
@@ -21,9 +36,9 @@ async function handle(request: Request): Promise<void> {
   busy = true;
   try {
     const start = performance.now();
-    if (!engine) engine = await createMfrEngine(request.modelDir);
+    const loaded = await loadEngine(request.modelDir);
     const loadMs = performance.now() - start;
-    const result = await engine.recognize(Buffer.from(request.imageBase64, 'base64'));
+    const result = await loaded.recognize(Buffer.from(request.imageBase64, 'base64'));
     send({
       id: request.id,
       result: { ...result, loadMs, peakRssKiB: process.resourceUsage().maxRSS },

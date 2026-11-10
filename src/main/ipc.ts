@@ -1,6 +1,6 @@
-import { ipcMain, clipboard, BrowserWindow, dialog, shell } from 'electron';
+import { ipcMain, clipboard, BrowserWindow, dialog, shell, Notification } from 'electron';
 import { IPC } from '../shared/types';
-import type { AppSettings } from '../shared/types';
+import type { AppSettings, HistoryUpdate } from '../shared/types';
 import { recognize, testConnection } from '../services/paddleocr';
 import { getSettings } from './store';
 import {
@@ -10,16 +10,26 @@ import {
   deleteHistoryItem,
   clearHistory,
   trimHistory,
+  updateHistoryItem,
 } from './db';
-import { startSnip, createThumbnail } from './capture';
+import { createThumbnail } from './capture';
 import { downloadMfrModel, getMfrStatus, recognizeMfr } from './mfr';
-import { MFR_REVISION } from '../services/mfr-model';
+import { MFR_REVISION, MODEL_HOSTS } from '../services/mfr-model';
 import { MFR_TEST_IMAGE } from '../shared/mfr-test-image';
+
+const MAX_CLIPBOARD_TEXT = 5 * 1024 * 1024;
+const activeNotifications = new Set<Notification>();
+
+export interface IpcActions {
+  snip: () => Promise<void>;
+  showMainWindow: () => void;
+}
 
 export function registerIpcHandlers(
   mainWindow: BrowserWindow,
   saveSettings: (updates: Partial<AppSettings>) => Promise<AppSettings>,
   clearModel: () => Promise<AppSettings>,
+  actions: IpcActions,
 ): void {
   let modelOperation = false;
   async function changeModel<T>(operation: () => Promise<T>): Promise<T> {
@@ -31,7 +41,7 @@ export function registerIpcHandlers(
       modelOperation = false;
     }
   }
-  ipcMain.handle(IPC.START_SNIP, () => startSnip(mainWindow));
+  ipcMain.handle(IPC.START_SNIP, () => actions.snip());
 
   ipcMain.handle(IPC.RECOGNIZE, async (_event, imageBase64: string) => {
     const settings = getSettings();
@@ -42,17 +52,20 @@ export function registerIpcHandlers(
     const result =
       settings.ocrEngine === 'mfr'
         ? await recognizeMfr(imageBase64)
-        : await recognize({
-            imageBase64,
-            pipeline: settings.pipeline,
-            apiUrl: settings.apiUrl,
-            accessToken: settings.accessToken,
-          });
+        : {
+            ...(await recognize({
+              imageBase64,
+              pipeline: settings.pipeline,
+              apiUrl: settings.apiUrl,
+              accessToken: settings.accessToken,
+            })),
+            kind: 'document' as const,
+          };
 
     // Persistence is secondary: a disk/thumbnail error must not discard OCR output.
     try {
       const thumbnail = createThumbnail(imageBase64);
-      addHistoryItem(
+      result.historyId = addHistoryItem(
         settings.ocrEngine === 'mfr' ? 'MFR-1.5' : settings.pipeline,
         thumbnail,
         result.latex,
@@ -109,7 +122,9 @@ export function registerIpcHandlers(
     }),
   );
   ipcMain.handle(IPC.MFR_OPEN_MODEL_PAGE, () =>
-    shell.openExternal(`https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`),
+    shell.openExternal(
+      `${MODEL_HOSTS[getSettings().modelSource]}/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`,
+    ),
   );
 
   ipcMain.handle(IPC.SET_SETTINGS, (_event, updates: Partial<AppSettings>) => {
@@ -145,9 +160,51 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC.CLEAR_HISTORY, () => clearHistory());
 
+  ipcMain.handle(IPC.UPDATE_HISTORY_ITEM, (_event, id: unknown, updates: unknown) => {
+    if (!Number.isInteger(id) || !updates || typeof updates !== 'object') {
+      throw new Error('Invalid history update.');
+    }
+    return updateHistoryItem(id as number, updates as HistoryUpdate);
+  });
+
   ipcMain.handle(IPC.PASTE_IMAGE, () => {
     const img = clipboard.readImage();
     if (img.isEmpty()) return null;
     return img.toPNG().toString('base64');
+  });
+
+  // The main-process clipboard works while the window is hidden or unfocused, unlike
+  // navigator.clipboard, which background recognition relies on.
+  ipcMain.handle(IPC.COPY_TEXT, (_event, text: unknown) => {
+    if (typeof text !== 'string' || text.length > MAX_CLIPBOARD_TEXT) {
+      throw new Error('Invalid clipboard text.');
+    }
+    clipboard.writeText(text);
+  });
+
+  /** Returns whether a system notification was shown; the visible window uses its toast. */
+  ipcMain.handle(IPC.NOTIFY, (_event, title: unknown, body: unknown) => {
+    if (typeof title !== 'string' || typeof body !== 'string') return false;
+    const windowInView =
+      !mainWindow.isDestroyed() &&
+      mainWindow.isVisible() &&
+      !mainWindow.isMinimized() &&
+      mainWindow.isFocused();
+    if (windowInView || !Notification.isSupported()) return false;
+    const notification = new Notification({
+      title: title.slice(0, 120),
+      body: body.length > 200 ? `${body.slice(0, 199)}…` : body,
+      silent: true,
+    });
+    // Keep a reference until the notification is gone, or its click handler can be collected.
+    activeNotifications.add(notification);
+    const release = () => activeNotifications.delete(notification);
+    notification.on('click', () => {
+      release();
+      actions.showMainWindow();
+    });
+    notification.on('close', release);
+    notification.show();
+    return true;
   });
 }

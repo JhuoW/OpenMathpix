@@ -25,6 +25,7 @@ function worker() {
       return kills;
     },
     succeed: (latex = 'x+1') => onMessage({ id: requests.at(-1)!.id, result: { latex } }),
+    respond: (result: WorkerResponse['result']) => onMessage({ id: requests.at(-1)!.id, result }),
     fail: (error: string) => onFailure(new Error(error)),
   };
 }
@@ -130,4 +131,45 @@ test('cache cleanup waits for the worker to release its native model files', asy
   await shutdown;
   assert.equal(stopped, true);
   await assert.rejects(session.recognize('image'), /replaced/);
+});
+
+test('model output is tidied for display while the raw output and confidence are kept', async () => {
+  const fake = worker();
+  const session = new MfrSession('/model', () => fake.transport);
+  try {
+    const pending = session.recognize('image', {
+      formatLatex: (latex) => latex.replace(/ /g, ''),
+    });
+    fake.respond({ latex: 'x ^ { 2 }', confidence: 0.98, lowestTokenProbability: 0.3 });
+    const result = await pending;
+    assert.equal(result.latex, 'x^{2}');
+    assert.equal(result.markdown, '$$\nx^{2}\n$$');
+    assert.equal(result.text, 'x^{2}');
+    assert.equal(result.kind, 'formula');
+    assert.deepEqual(result.confidence, { average: 0.98, lowest: 0.3 });
+    assert.equal((result.rawResponse as { rawLatex: string }).rawLatex, 'x ^ { 2 }');
+  } finally {
+    session.dispose();
+  }
+});
+
+test('warm-up starts the worker without a request that needs a reply', async () => {
+  const fake = worker();
+  let created = 0;
+  const session = new MfrSession('/model', () => {
+    created += 1;
+    return fake.transport;
+  });
+  try {
+    session.warmup();
+    assert.equal(created, 1);
+    assert.deepEqual(fake.requests, [{ id: 0, modelDir: '/model' }]);
+    // A recognition reuses the warmed worker.
+    const pending = session.recognize('image');
+    assert.equal(created, 1);
+    fake.succeed('x');
+    assert.equal((await pending).latex, 'x');
+  } finally {
+    session.dispose();
+  }
 });

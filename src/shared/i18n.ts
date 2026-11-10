@@ -36,9 +36,7 @@ const chinese = {
   'Tables, formulas, charts, mixed layout': '表格、公式、图表和混合版面',
   'Vision-language document parsing': '视觉语言文档解析',
   'Upgraded vision-language document parsing': '增强版视觉语言文档解析',
-  Preferences: '偏好设置',
   'Snip Hotkey': '截图快捷键',
-  'e.g. CommandOrControl+Shift+S': '例如：CommandOrControl+Shift+S',
   'Default Output Format': '默认输出格式',
   LaTeX: 'LaTeX',
   Latex: 'LaTeX',
@@ -125,14 +123,14 @@ const chinese = {
     '未识别到 LaTeX 公式，请尝试更清晰的单公式截图。',
   'No LaTeX formulas found. Try PP-StructureV3 or PaddleOCR-VL pipeline.':
     '未识别到 LaTeX 公式，请尝试 PP-StructureV3 或 PaddleOCR-VL 识别流程。',
-  'Raw LaTeX source': 'LaTeX 源码',
   'Parse error: {message}': '解析错误：{message}',
   'Search history...': '搜索历史记录…',
   'Clear All': '全部清空',
   'Clear all history?': '确定清空全部历史记录吗？',
   'No history yet.': '暂无历史记录。',
   Delete: '删除',
-  'Drag to select a region. Press Esc to cancel.': '拖动选择区域，按 Esc 取消。',
+  'Drag to select a region. Press Esc or right-click to cancel.':
+    '拖动选择区域，按 Esc 或单击右键取消。',
   'Selection too small. Select a larger area, or press Esc to cancel.':
     '所选区域过小，请选择更大范围，或按 Esc 取消。',
   'Could not load settings. Please reopen the app.': '无法加载设置，请重新打开应用。',
@@ -228,6 +226,74 @@ const chinese = {
   'The captured image is empty or invalid.': '截图为空或无效。',
   'Secure token storage is unavailable. Enable your system keyring and try again.':
     '安全令牌存储不可用，请启用系统密钥环后重试。',
+
+  // Result view
+  Result: '结果',
+  'New Snip ({hotkey})': '新建截图（{hotkey}）',
+  'Snip a formula to get LaTeX': '截取公式，获取 LaTeX',
+  'Snip from any app': '在任意应用中截图',
+  'Paste an image': '粘贴图片',
+  'Drop an image file here': '将图片文件拖到此处',
+  'Drop the image to recognize it': '松开鼠标即可识别图片',
+  'Show the captured image': '查看截图原图',
+  'Nothing to preview.': '没有可预览的内容。',
+  'LaTeX source': 'LaTeX 源码',
+  'Markdown source': 'Markdown 源码',
+  'Edit the source to correct the result; copies and history use your changes.':
+    '可直接修改源码来纠正结果，复制内容和历史记录会同步使用修改后的版本。',
+  Edited: '已修改',
+  Reset: '还原',
+  'The model was unsure about at least one symbol. Please check the result.':
+    '模型对至少一个符号不太确定，请核对结果。',
+  'Copy as': '复制为',
+  'Change the copy style in Settings.': '可在设置中更改复制格式。',
+  'Plain LaTeX source': '纯 LaTeX 源码',
+  'Inline math for Markdown and LaTeX documents': '行内公式，适用于 Markdown 和 LaTeX 文档',
+  'Display math for Markdown and LaTeX documents': '独立公式，适用于 Markdown 和 LaTeX 文档',
+  'LaTeX display math': 'LaTeX 独立公式',
+  'Numbered LaTeX equation environment': '带编号的 LaTeX equation 环境',
+  'MathML, pastes as an editable equation in Microsoft Word':
+    'MathML，粘贴到 Microsoft Word 中会成为可编辑公式',
+  'Copied to clipboard': '已复制到剪贴板',
+  'Could not apply the copy style; copied plain LaTeX instead.':
+    '无法转换为所选复制格式，已改为复制纯 LaTeX。',
+  'Could not save your changes to history.': '无法将修改保存到历史记录。',
+
+  // History
+  Open: '打开',
+  'No matching history.': '没有匹配的历史记录。',
+
+  // Settings
+  Snipping: '截图',
+  'After a snip': '截图完成后',
+  'Show the result window': '显示结果窗口',
+  'Bring OpenMathpix to the front to review and edit the result.':
+    '将 OpenMathpix 切换到前台，便于查看和修改结果。',
+  'Copy in the background': '后台复制',
+  'Stay in your current app. The result is copied and a notification appears.':
+    '留在当前应用中，识别结果会自动复制并弹出系统通知。',
+  'Press the new shortcut. Esc cancels.': '请按下新的快捷键，按 Esc 取消。',
+  'Click to change': '点击修改',
+  Output: '输出',
+  'Opened after recognition and copied automatically.': '识别完成后打开此格式并自动复制。',
+  'LaTeX copy style': 'LaTeX 复制格式',
+  'Used for automatic copying and the Copy button on the LaTeX tab.':
+    '用于自动复制和 LaTeX 标签页的“复制”按钮。',
+  'Tidy local model LaTeX': '整理本地模型输出的 LaTeX',
+  'Removes extra spaces and redundant braces, e.g. b ^ { 2 } becomes b^{2}. The formula itself is unchanged. Applies to new recognitions.':
+    '去除多余空格和冗余花括号，例如 b ^ { 2 } 会变为 b^{2}，公式本身不变。仅对之后的识别生效。',
+  'Appearance and History': '外观与历史记录',
+  'Download source': '下载源',
+  'Hugging Face (official)': 'Hugging Face（官方）',
+  'hf-mirror.com (mirror)': 'hf-mirror.com（镜像）',
+  'Try the mirror if Hugging Face is slow or unreachable. Every file is verified with SHA-256 either way.':
+    '如果 Hugging Face 速度慢或无法访问，可改用镜像。无论使用哪个下载源，每个文件都会进行 SHA-256 校验。',
+  'Unsupported snip action.': '不支持此截图后操作。',
+  'Unsupported LaTeX copy style.': '不支持此 LaTeX 复制格式。',
+  'LaTeX cleanup must be on or off.': 'LaTeX 整理选项必须为开启或关闭。',
+  'Unsupported model download source.': '不支持此模型下载源。',
+  'Invalid history update.': '历史记录更新无效。',
+  'Invalid clipboard text.': '剪贴板内容无效。',
 } as const;
 
 export type TranslationKey = keyof typeof chinese;

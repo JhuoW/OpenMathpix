@@ -14,6 +14,10 @@ export interface MfrRecognitionResult {
   latex: string;
   elapsedMs: number;
   tokenCount: number;
+  /** Geometric mean probability of the greedily chosen tokens, including end of sequence. */
+  confidence: number;
+  /** The least certain chosen token; a low value often marks one misread symbol. */
+  lowestTokenProbability: number;
 }
 
 export interface MfrEngine {
@@ -209,6 +213,8 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
         throw new Error('MFR encoder 返回了无效结果，请重新下载模型。');
       }
       const tokenIds: number[] = [startToken as number];
+      let logProbability = 0;
+      let lowestProbability = 1;
       for (let index = 0; index < maxTokens; index++) {
         checkTimeout();
         const input = new ort.Tensor('int64', BigInt64Array.from(tokenIds, BigInt), [
@@ -244,6 +250,14 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
           if (nextToken < 0 || !Number.isFinite(bestScore)) {
             throw new Error('MFR 返回了无效概率，请重试或重新下载模型。');
           }
+          // Softmax probability of the chosen token; subtracting the maximum keeps exp() finite.
+          let total = 0;
+          for (let token = 0; token < tokenizer.vocabularySize; token++) {
+            total += Math.exp(scores[offset + token] - bestScore);
+          }
+          const probability = 1 / total;
+          logProbability += Math.log(probability);
+          lowestProbability = Math.min(lowestProbability, probability);
         } finally {
           input.dispose();
           if (decoded) disposeOutputs(decoded);
@@ -251,7 +265,13 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
         if (nextToken === endToken) {
           const latex = tokenizer.decode(tokenIds.slice(1)).trim();
           if (!latex) throw new Error('没有识别到公式，请框选清晰的单个公式后重试。');
-          return { latex, elapsedMs: performance.now() - started, tokenCount: tokenIds.length - 1 };
+          return {
+            latex,
+            elapsedMs: performance.now() - started,
+            tokenCount: tokenIds.length - 1,
+            confidence: Math.exp(logProbability / tokenIds.length),
+            lowestTokenProbability: lowestProbability,
+          };
         }
         tokenIds.push(nextToken);
       }

@@ -1,83 +1,144 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import type { HistoryItem } from '../shared/types';
+import type { HistoryItem, HistoryUpdate } from '../shared/types';
 
-interface HistoryStore {
+interface HistoryData {
   nextId: number;
   items: HistoryItem[];
 }
 
-let storePath: string;
-let store: HistoryStore = { nextId: 1, items: [] };
+const MAX_RESULT_LENGTH = 1_000_000;
 
-export function initDb(): void {
-  storePath = path.join(app.getPath('userData'), 'history.json');
+function isHistoryData(value: unknown): value is HistoryData {
+  if (!value || typeof value !== 'object') return false;
+  const data = value as Partial<HistoryData>;
+  return Number.isInteger(data.nextId) && Array.isArray(data.items);
+}
+
+/** A JSON history file that is replaced atomically and never silently discarded. */
+export function createHistoryStore(storePath: string) {
+  let data: HistoryData = { nextId: 1, items: [] };
+
   if (fs.existsSync(storePath)) {
     try {
-      store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
-    } catch {
-      store = { nextId: 1, items: [] };
+      const parsed: unknown = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+      if (!isHistoryData(parsed)) throw new Error('Unexpected history format');
+      data = parsed;
+    } catch (error) {
+      // Keep the unreadable file for recovery instead of overwriting it on the next save.
+      const backup = storePath.replace(/\.json$/, '') + `.corrupt-${Date.now()}.json`;
+      try {
+        fs.renameSync(storePath, backup);
+        console.warn(`History file was unreadable and has been kept at ${backup}:`, error);
+      } catch (renameError) {
+        console.warn('Could not back up the unreadable history file:', renameError);
+      }
     }
   }
-}
 
-function save(): void {
-  fs.writeFileSync(storePath, JSON.stringify(store), 'utf-8');
-}
-
-export function addHistoryItem(
-  pipeline: HistoryItem['pipeline'],
-  imageThumbnail: string,
-  latex: string,
-  markdown: string,
-  text: string,
-): number {
-  const id = store.nextId++;
-  store.items.push({
-    id,
-    timestamp: new Date().toISOString(),
-    pipeline,
-    imageThumbnail,
-    resultLatex: latex,
-    resultMarkdown: markdown,
-    resultText: text,
-  });
-  save();
-  return id;
-}
-
-export function getHistory(limit = 50, offset = 0): HistoryItem[] {
-  const sorted = [...store.items].reverse();
-  return sorted.slice(offset, offset + limit);
-}
-
-export function searchHistory(query: string): HistoryItem[] {
-  const q = query.toLowerCase();
-  return [...store.items]
-    .reverse()
-    .filter(
-      (item) =>
-        item.resultLatex.toLowerCase().includes(q) ||
-        item.resultMarkdown.toLowerCase().includes(q) ||
-        item.resultText.toLowerCase().includes(q),
-    )
-    .slice(0, 100);
-}
-
-export function deleteHistoryItem(id: number): void {
-  store.items = store.items.filter((item) => item.id !== id);
-  save();
-}
-
-export function clearHistory(): void {
-  store.items = [];
-  save();
-}
-
-export function trimHistory(maxItems: number): void {
-  if (store.items.length > maxItems) {
-    store.items = store.items.slice(-maxItems);
-    save();
+  function save(): void {
+    // Write a sibling file, then rename: a crash cannot leave a half-written history.
+    const temporary = `${storePath}.${process.pid}.tmp`;
+    try {
+      fs.writeFileSync(temporary, JSON.stringify(data), 'utf-8');
+      fs.renameSync(temporary, storePath);
+    } catch (error) {
+      fs.rmSync(temporary, { force: true });
+      throw error;
+    }
   }
+
+  return {
+    add(
+      pipeline: HistoryItem['pipeline'],
+      imageThumbnail: string,
+      latex: string,
+      markdown: string,
+      text: string,
+    ): number {
+      const id = data.nextId++;
+      data.items.push({
+        id,
+        timestamp: new Date().toISOString(),
+        pipeline,
+        imageThumbnail,
+        resultLatex: latex,
+        resultMarkdown: markdown,
+        resultText: text,
+      });
+      save();
+      return id;
+    },
+
+    list(limit = 50, offset = 0): HistoryItem[] {
+      return [...data.items].reverse().slice(offset, offset + limit);
+    },
+
+    search(query: string): HistoryItem[] {
+      const q = query.toLowerCase();
+      return [...data.items]
+        .reverse()
+        .filter(
+          (item) =>
+            item.resultLatex.toLowerCase().includes(q) ||
+            item.resultMarkdown.toLowerCase().includes(q) ||
+            item.resultText.toLowerCase().includes(q),
+        )
+        .slice(0, 100);
+    },
+
+    /** Store the user's corrections; returns false when the entry no longer exists. */
+    update(id: number, updates: HistoryUpdate): boolean {
+      const item = data.items.find((entry) => entry.id === id);
+      if (!item) return false;
+      for (const key of ['resultLatex', 'resultMarkdown', 'resultText'] as const) {
+        const value = updates[key];
+        if (value === undefined) continue;
+        if (typeof value !== 'string' || value.length > MAX_RESULT_LENGTH) {
+          throw new Error('Invalid history update.');
+        }
+        item[key] = value;
+      }
+      save();
+      return true;
+    },
+
+    remove(id: number): void {
+      data.items = data.items.filter((item) => item.id !== id);
+      save();
+    },
+
+    clear(): void {
+      data.items = [];
+      save();
+    },
+
+    trim(maxItems: number): void {
+      if (data.items.length > maxItems) {
+        data.items = data.items.slice(-maxItems);
+        save();
+      }
+    },
+  };
 }
+
+type HistoryStore = ReturnType<typeof createHistoryStore>;
+let store: HistoryStore | undefined;
+
+function history(): HistoryStore {
+  if (!store) throw new Error('History is not initialized.');
+  return store;
+}
+
+export function initDb(): void {
+  store = createHistoryStore(path.join(app.getPath('userData'), 'history.json'));
+}
+
+export const addHistoryItem: HistoryStore['add'] = (...args) => history().add(...args);
+export const getHistory: HistoryStore['list'] = (...args) => history().list(...args);
+export const searchHistory: HistoryStore['search'] = (...args) => history().search(...args);
+export const updateHistoryItem: HistoryStore['update'] = (...args) => history().update(...args);
+export const deleteHistoryItem: HistoryStore['remove'] = (...args) => history().remove(...args);
+export const clearHistory: HistoryStore['clear'] = () => history().clear();
+export const trimHistory: HistoryStore['trim'] = (...args) => history().trim(...args);
