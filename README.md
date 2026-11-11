@@ -44,23 +44,21 @@
    (about 120 MB), then tests it on a sample formula.
 
    <img src="image/readme/guide-en.png" alt="The first-run guide for choosing a model" width="90%" />
-
 2. **Snip.** Press `Ctrl+Shift+S` in any app, or click **New Snip**. The screen dims; drag around
    the formula, leaving a small margin. Press `Esc` or right-click to cancel.
 
    <img src="image/readme/snip.png" alt="Dragging a selection around a formula in a PDF" width="90%" />
-
 3. **Paste.** The result is copied automatically. Change the default format in
    **Settings → Output**, or use **Copy as** on the result page.
 
 ## Choosing a model
 
-|                     | **MFR-1.5** (default)                   | **TexTeller**                                                |
-| ------------------- | --------------------------------------- | ------------------------------------------------------------ |
-| Best for            | Single formulas, inline math            | Long, multi-line formulas, matrices, cases, aligned equations |
-| Speed               | Fastest                                 | Slower, most accurate                                        |
-| Download            | About 120 MB                            | About 320 MB                                                 |
-| Memory in use       | About 0.3 GB                            | About 0.8 GB                                                 |
+|               | **MFR-1.5** (default)  | **TexTeller**                                           |
+| ------------- | ---------------------------- | ------------------------------------------------------------- |
+| Best for      | Single formulas, inline math | Long, multi-line formulas, matrices, cases, aligned equations |
+| Speed         | Fastest                      | Slower, most accurate                                         |
+| Download      | About 120 MB                 | About 320 MB                                                  |
+| Memory in use | About 0.3 GB                 | About 0.8 GB                                                  |
 
 You can install both and switch any time in **Settings → Recognition**. Only the model in use is
 loaded, and it is released after a few idle minutes. **Local Models** lets you test a model on a
@@ -76,16 +74,16 @@ Hugging Face is slow or blocked, open **Advanced model options** and switch **Do
 
 ## Keyboard shortcuts
 
-| Shortcut              | Action                                  |
-| --------------------- | --------------------------------------- |
-| `Ctrl+Shift+S`        | Snip from any app (change in Settings)  |
-| `Ctrl+N`              | New snip from the app window            |
-| `Ctrl+V`              | Recognize a pasted image                |
-| `Ctrl+Shift+V`        | Recognize the image on the clipboard    |
-| `Ctrl+Shift+C`        | Copy the current result                 |
-| `Ctrl+1` / `Ctrl+2`   | Result / History                        |
-| `Ctrl+,`              | Settings                                |
-| `Esc` / right-click   | Cancel a snip                           |
+| Shortcut                | Action                                 |
+| ----------------------- | -------------------------------------- |
+| `Ctrl+Shift+S`        | Snip from any app (change in Settings) |
+| `Ctrl+N`              | New snip from the app window           |
+| `Ctrl+V`              | Recognize a pasted image               |
+| `Ctrl+Shift+V`        | Recognize the image on the clipboard   |
+| `Ctrl+Shift+C`        | Copy the current result                |
+| `Ctrl+1` / `Ctrl+2` | Result / History                       |
+| `Ctrl+,`              | Settings                               |
+| `Esc` / right-click   | Cancel a snip                          |
 
 ## More
 
@@ -102,7 +100,6 @@ or your own PaddleOCR server. With this engine, your snips are sent to that serv
    choose a model, and copy the `API_URL` and `TOKEN` from the example code.
 
    <img src="image/readme/aistudio-api.png" alt="Where to find the API URL and token on AI Studio" width="420" />
-
 2. In **Settings → Recognition**, choose **PaddleOCR API**, paste the **API URL** and
    **Access Token**, and select the matching **Pipeline**.
 3. Click **Connect & Use**. OpenMathpix sends one small test image and switches to PaddleOCR only
@@ -110,12 +107,12 @@ or your own PaddleOCR server. With this engine, your snips are sent to that serv
 
    <img src="image/readme/paddle-en.png" alt="PaddleOCR settings" width="420" />
 
-| Pipeline           | Best for                                   |
-| ------------------ | ------------------------------------------ |
-| PP-OCRv5           | Plain text, Chinese and English            |
-| PP-StructureV3     | Formulas, tables, charts and mixed layouts |
-| PaddleOCR-VL       | Document parsing with a vision-language model |
-| PaddleOCR-VL-1.5   | Higher accuracy, seals and irregular text  |
+| Pipeline         | Best for                                      |
+| ---------------- | --------------------------------------------- |
+| PP-OCRv5         | Plain text, Chinese and English               |
+| PP-StructureV3   | Formulas, tables, charts and mixed layouts    |
+| PaddleOCR-VL     | Document parsing with a vision-language model |
+| PaddleOCR-VL-1.5 | Higher accuracy, seals and irregular text     |
 
 Each pipeline has its own API URL. Update the URL when you switch pipelines. For a self-hosted
 server, enter its address (for example `http://localhost:8080`) and leave the token empty.
@@ -164,6 +161,14 @@ npm run package    # build the Windows installer into dist/
 With a local model, images are recognized on your computer and are never uploaded. OpenMathpix
 goes online only to download a model or when you choose **Help → Check for Updates**. If you
 connect PaddleOCR, your snips are sent to the service you configured.
+
+## Call for Contributions
+
+Bug reports, recognition improvements, UI refinements, translations, documentation and code contributions are all welcome.
+
+**Help bring OpenMathpix to macOS.** (*I'm still saving up for a Mac* 😄) We especially welcome contributors who can help develop and test a Mac version, including screen capture permissions, native window and menu behavior, and packaging for Apple Silicon and Intel Macs.
+
+Have an idea or want to help? [Open an issue](https://github.com/JhuoW/OpenMathpix/issues) to discuss it, or [submit a pull request](https://github.com/JhuoW/OpenMathpix/pulls).
 
 ## License
 
