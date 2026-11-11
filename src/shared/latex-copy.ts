@@ -45,6 +45,28 @@ function wrap(formula: string, style: Exclude<LatexCopyStyle, 'mathml'>): string
   }
 }
 
+const MATH_OPEN = /^\s*<math\b[^>]*>/;
+const MATH_CLOSE = /<\/math>\s*$/;
+
+/**
+ * Word converts a pasted `<math>` element into an editable equation, but pastes two or
+ * more elements as literal XML. Several formulas therefore become one table, one per row.
+ */
+export function combineMathML(elements: string[]): string {
+  if (elements.length === 1) return elements[0];
+  const rows = elements.map((element) => {
+    if (!MATH_OPEN.test(element) || !MATH_CLOSE.test(element)) {
+      throw new Error('Could not convert the formula to MathML.');
+    }
+    const content = element.replace(MATH_OPEN, '').replace(MATH_CLOSE, '');
+    return `<mtr><mtd>${content}</mtd></mtr>`;
+  });
+  return (
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+    `<mtable columnalign="left">${rows.join('')}</mtable></math>`
+  );
+}
+
 /**
  * Text placed on the clipboard for LaTeX. MathML conversion is injected because it
  * needs KaTeX, which only the renderer loads.
@@ -56,7 +78,7 @@ export function formatLatexForCopy(
 ): string {
   const formulas = latexFormulas(latex);
   if (!formulas.length) return '';
-  if (style === 'mathml') return formulas.map(toMathML).join('\n');
+  if (style === 'mathml') return combineMathML(formulas.map(toMathML));
   if (style === 'plain' && formulas.length === 1) return formulas[0];
   // Several bare formulas cannot be pasted meaningfully; keep them separated as blocks.
   const blockStyle = style === 'plain' ? 'display' : style;

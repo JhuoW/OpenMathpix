@@ -45,6 +45,7 @@ export class MfrSession {
     private readonly createWorker: () => MfrWorkerTransport,
     private readonly onDisposed: () => void = () => {},
     private readonly timeoutMs = 90_000,
+    private readonly modelInfo = { engine: 'MFR-1.5', revision: MFR_REVISION },
   ) {}
 
   private start(): MfrWorkerTransport {
@@ -74,7 +75,7 @@ export class MfrSession {
             typeof confidence === 'number' && typeof lowestTokenProbability === 'number'
               ? { average: confidence, lowest: lowestTokenProbability }
               : undefined,
-          rawResponse: { engine: 'MFR-1.5', revision: MFR_REVISION, ...message.result, rawLatex },
+          rawResponse: { ...this.modelInfo, ...message.result, rawLatex },
         });
       }
       this.afterRequest();

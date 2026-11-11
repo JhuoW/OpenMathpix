@@ -151,10 +151,12 @@ body {
 /* Toast animation */
 .toast-enter {
   opacity: 0;
-  transform: translateY(8px);
+  --tw-translate-y: 8px;
 }
 .toast-visible {
   opacity: 1;
-  transform: translateY(0);
-  transition: all 0.2s ease;
+  --tw-translate-y: 0px;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }

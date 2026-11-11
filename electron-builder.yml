@@ -1,5 +1,8 @@
 appId: com.openmathpix.app
 productName: OpenMathpix
+copyright: Copyright © 2026 Wei Zhuo
+# Help checks GitHub Releases directly; distribution does not use electron-updater metadata.
+publish: null
 directories:
   buildResources: build
   output: dist
@@ -13,20 +16,30 @@ asarUnpack:
   - node_modules/sharp/**/*
 afterPack: scripts/after-pack.cjs
 extraResources:
+  # Window and tray icons loaded at runtime (see getIconPath and createTray).
   - from: build/icon.png
     to: icon.png
-linux:
-  target:
-    - AppImage
-    - deb
-  category: Utility
-mac:
-  target:
-    - dmg
-    - zip
-  category: public.app-category.utilities
+  - from: build/icon.ico
+    to: icon.ico
+  - from: build/tray.png
+    to: tray.png
+  - from: build/tray@2x.png
+    to: tray@2x.png
 win:
   icon: build/icon.ico
   target:
-    - nsis
-    - portable
+    - target: nsis
+      arch: [x64]
+nsis:
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerLanguages: [en_US, zh_CN]
+  displayLanguageSelector: false
+  include: build/installer.nsh
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  # Updates are downloaded from GitHub by the user; no electron-updater cache is needed.
+  differentialPackage: false

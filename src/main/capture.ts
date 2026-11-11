@@ -9,7 +9,14 @@ import {
 import path from 'path';
 import { IPC } from '../shared/types';
 import type { AfterSnipAction, ScreenCapture, SnipSelection } from '../shared/types';
-import { normalizedCropBounds } from './capture-geometry';
+import {
+  captureSizes,
+  nativeSize,
+  normalizedCropBounds,
+  overlayWindowOptions,
+  sizeKey,
+} from './capture-geometry';
+import { afterSnipWindow, isOnScreen } from './snip-window';
 
 interface Overlay {
   window: BrowserWindow;
@@ -37,7 +44,10 @@ export async function startSnip(
   if (snipInProgress || mainWindow.isDestroyed()) return;
   snipInProgress = true;
   // A snip started from the tray or hotkey must not pop up a window that was hidden.
-  const wasVisible = mainWindow.isVisible() && !mainWindow.isMinimized();
+  const wasOnScreen = isOnScreen({
+    visible: mainWindow.isVisible(),
+    minimized: mainWindow.isMinimized(),
+  });
 
   // Each display has its own overlay and normalized coordinate space.
   const overlays = new Map<number, Overlay>();
@@ -59,12 +69,16 @@ export async function startSnip(
     overlays.clear();
     snipInProgress = false;
     if (mainWindow.isDestroyed()) return;
-    if (imageBase64 && options.afterSnip() === 'window') {
+    const action = afterSnipWindow({
+      wasOnScreen,
+      captured: Boolean(imageBase64),
+      afterSnip: options.afterSnip(),
+    });
+    if (action === 'focus') {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
-    } else if (wasVisible) {
-      // Cancelled, or recognized in the background: restore without taking focus away.
+    } else if (action === 'show-inactive') {
       mainWindow.showInactive();
     }
     if (imageBase64) mainWindow.webContents.send(IPC.SNIP_CAPTURED, imageBase64);
@@ -126,8 +140,11 @@ export async function startSnip(
   }
 
   try {
-    mainWindow.hide();
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    if (wasOnScreen) {
+      mainWindow.hide();
+      // Let the window disappear before the desktop is captured.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
     if (mainWindow.isDestroyed()) {
       finish();
       return;
@@ -135,12 +152,18 @@ export async function startSnip(
 
     const displays = screen.getAllDisplays();
     if (displays.length === 0) throw new Error('No display is available for screen capture.');
-    const maxW = Math.max(...displays.map((d) => Math.round(d.size.width * d.scaleFactor)));
-    const maxH = Math.max(...displays.map((d) => Math.round(d.size.height * d.scaleFactor)));
-    const sources = await desktopCapturer.getSources({
-      types: ['screen'],
-      thumbnailSize: { width: maxW, height: maxH },
-    });
+    // Capture each display at its own resolution (one request per distinct resolution).
+    const capturesBySize = new Map(
+      await Promise.all(
+        captureSizes(displays).map(
+          async (size) =>
+            [
+              sizeKey(size),
+              await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size }),
+            ] as const,
+        ),
+      ),
+    );
     if (mainWindow.isDestroyed()) {
       finish();
       return;
@@ -154,6 +177,7 @@ export async function startSnip(
     screen.on('display-metrics-changed', onDisplayChanged);
 
     for (const display of displays) {
+      const sources = capturesBySize.get(sizeKey(nativeSize(display))) ?? [];
       const source =
         sources.find((s) => s.display_id === String(display.id)) ??
         (displays.length === 1 && sources.length === 1 ? sources[0] : undefined);
@@ -166,16 +190,7 @@ export async function startSnip(
         displayId: String(display.id),
       };
       const window = new BrowserWindow({
-        ...display.bounds,
-        frame: false,
-        transparent: false,
-        backgroundColor: '#000000',
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        resizable: false,
-        fullscreen: process.platform !== 'darwin',
-        simpleFullscreen: process.platform === 'darwin',
-        hasShadow: false,
+        ...overlayWindowOptions(display.bounds, process.platform),
         show: false,
         webPreferences: {
           preload: path.join(__dirname, '../preload/index.js'),
@@ -189,6 +204,9 @@ export async function startSnip(
         image: source.thumbnail,
         ready: false,
       });
+      // Windows sizes a new window with the creating display's scale factor. Once the window
+      // is on its own display, apply the bounds again so mixed-DPI displays are fully covered.
+      if (process.platform === 'win32') window.setBounds(display.bounds);
       window.setAlwaysOnTop(true, 'screen-saver');
       window.on('closed', () => finish());
       window.webContents.on('render-process-gone', () => {

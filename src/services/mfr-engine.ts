@@ -28,6 +28,31 @@ export interface MfrEngine {
 const IMAGE_SIZE = 384;
 const MAX_TOKENS = 1024;
 const DEFAULT_TIMEOUT_MS = 60_000;
+const NO_FORMULA = '截图中没有可辨认的公式，请重新框选公式区域。';
+
+/**
+ * Detects decoding that has gone off the rails. On text, code or interface screenshots the
+ * model keeps emitting letter-by-letter `\mathrm{...}` and repeated blocks for hundreds of
+ * tokens; without a key/value cache every token re-reads the whole prefix, so this runs
+ * for a minute before the timeout. Real formulas are decoded with near certainty: over 21
+ * formulas (up to 194 tokens, including 6×6 matrices) the least certain 64-token stretch
+ * averaged -0.007 log probability per token, while every degenerate run fell below -0.36.
+ * Stopping below -0.2 (geometric mean probability 0.82) leaves a wide margin on both sides.
+ */
+export function createDegenerationGuard(window = 64, threshold = -0.2) {
+  const recent: number[] = [];
+  let sum = 0;
+  return {
+    /** Add the chosen token's probability; true once the recent output is degenerate. */
+    add(probability: number): boolean {
+      const logProbability = Math.log(Math.max(probability, 1e-12));
+      recent.push(logProbability);
+      sum += logProbability;
+      if (recent.length > window) sum -= recent.shift()!;
+      return recent.length === window && sum / window < threshold;
+    },
+  };
+}
 
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -96,7 +121,7 @@ export async function prepareMfrImage(image: Buffer): Promise<Float32Array> {
     }
     if (maximum - minimum >= 4) hasContrast = true;
   }
-  if (!hasContrast) throw new Error('截图中没有可辨认的公式，请重新框选公式区域。');
+  if (!hasContrast) throw new Error(NO_FORMULA);
   return result;
 }
 
@@ -215,6 +240,8 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
       const tokenIds: number[] = [startToken as number];
       let logProbability = 0;
       let lowestProbability = 1;
+      const degeneration = createDegenerationGuard();
+      let degenerate = false;
       for (let index = 0; index < maxTokens; index++) {
         checkTimeout();
         const input = new ort.Tensor('int64', BigInt64Array.from(tokenIds, BigInt), [
@@ -258,6 +285,7 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
           const probability = 1 / total;
           logProbability += Math.log(probability);
           lowestProbability = Math.min(lowestProbability, probability);
+          degenerate = degeneration.add(probability);
         } finally {
           input.dispose();
           if (decoded) disposeOutputs(decoded);
@@ -273,6 +301,8 @@ export async function createMfrEngine(modelDir: string): Promise<MfrEngine> {
             lowestTokenProbability: lowestProbability,
           };
         }
+        // Fail fast instead of decoding noise until the timeout.
+        if (degenerate) throw new Error(NO_FORMULA);
         tokenIds.push(nextToken);
       }
       throw new Error(`公式输出超过 ${maxTokens} 个 token，结果可能不完整，请分别框选较短的公式。`);

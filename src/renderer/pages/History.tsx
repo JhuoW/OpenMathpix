@@ -12,24 +12,25 @@ function toResult(item: HistoryItem): OCRResult {
     markdown: item.resultMarkdown,
     text: item.resultText,
     rawResponse: null,
-    kind: item.pipeline === 'MFR-1.5' ? 'formula' : 'document',
+    kind: item.pipeline === 'MFR-1.5' || item.pipeline === 'TexTeller' ? 'formula' : 'document',
     historyId: item.id,
   };
 }
 
 export default function History() {
   const { language, t } = useI18n();
-  const { showToast, openResult, settings } = useAppStore();
+  const { showToast, openResult, settings, isRecognizing } = useAppStore();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
   const requestVersion = useRef(0);
+  const [mutating, setMutating] = useState(false);
 
   const loadHistory = useCallback(async () => {
     const version = ++requestVersion.current;
     // Show corrections saved moments ago on the result page.
-    historySaver.flushAll();
     try {
+      await historySaver.flushAndWait();
       const query = search.trim();
       const data = query
         ? await window.api.searchHistory(query)
@@ -61,21 +62,31 @@ export default function History() {
   };
 
   const deleteItem = async (id: number) => {
+    if (mutating || useAppStore.getState().isRecognizing) return;
+    setMutating(true);
     try {
       await window.api.deleteHistoryItem(id);
+      useAppStore.getState().forgetHistory(id);
       await loadHistory();
     } catch {
       showToast('Could not delete the history item.');
+    } finally {
+      setMutating(false);
     }
   };
 
   const clearAll = async () => {
+    if (mutating || useAppStore.getState().isRecognizing) return;
     if (!confirm(t('Clear all history?'))) return;
+    setMutating(true);
     try {
       await window.api.clearHistory();
+      useAppStore.getState().forgetHistory();
       await loadHistory();
     } catch {
       showToast('Could not clear history.');
+    } finally {
+      setMutating(false);
     }
   };
 
@@ -93,7 +104,7 @@ export default function History() {
         />
         <button
           onClick={clearAll}
-          disabled={!items.length && !search}
+          disabled={mutating || isRecognizing || (!items.length && !search)}
           className="px-3 py-1.5 text-sm text-red-600 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 transition-colors"
         >
           {t('Clear All')}
@@ -115,6 +126,7 @@ export default function History() {
               <button
                 type="button"
                 onClick={() => openItem(item)}
+                disabled={mutating}
                 title={t('Open')}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
@@ -137,7 +149,8 @@ export default function History() {
                     </span>
                   </span>
                   <span className="block truncate text-sm text-gray-700 dark:text-gray-200">
-                    {item.pipeline === 'MFR-1.5' && item.resultLatex ? (
+                    {(item.pipeline === 'MFR-1.5' || item.pipeline === 'TexTeller') &&
+                    item.resultLatex ? (
                       <InlineFormula latex={item.resultLatex} />
                     ) : (
                       (item.resultText || item.resultMarkdown || item.resultLatex).slice(0, 120)
@@ -159,6 +172,7 @@ export default function History() {
                 <button
                   type="button"
                   onClick={() => void deleteItem(item.id)}
+                  disabled={mutating || isRecognizing}
                   title={t('Delete')}
                   aria-label={t('Delete')}
                   className="icon-button hover:!text-red-600"

@@ -1,252 +1,176 @@
 <p align="center">
-  <img src="image/promotion.png" alt="OpenMathpix" width="100%" />
-</p>
-
-<h1 align="center">OpenMathpix</h1>
-
-<p align="center">
-  <a href="README.zh-CN.md">
-    <img src="image/readme-zh-cn.svg" alt="中文介绍" width="112" height="32" />
-  </a>
+  <img src="image/readme/hero-en.png" alt="Snipping a formula from a PDF and getting its LaTeX in OpenMathpix" width="100%" />
 </p>
 
 <p align="center">
-  Open-source desktop snipping tool that converts formula screenshots into LaTeX locally with <a href="https://huggingface.co/breezedeus/pix2text-mfr-1.5">Pix2Text MFR-1.5</a>, with optional <a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR</a> APIs for text, tables and document layouts.
+  <b>OpenMathpix: Snip any formula on screen and get LaTeX instantly.</b><br />
+  Free and open source · Runs fully offline · Fast and accurate
 </p>
 
----
+<p align="center">
+  <a href="https://github.com/JhuoW/OpenMathpix/releases/latest"><img src="https://img.shields.io/github/v/release/JhuoW/OpenMathpix?label=Download%20for%20Windows&logo=windows&color=2563eb" alt="Download for Windows" height="28" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-6b7280" alt="License: AGPL-3.0" height="28" /></a>
+  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-0969da" alt="简体中文" height="28" /></a>
+</p>
 
-## Installation
+## Features
 
-### Windows (portable, recommended)
+- **Snip from anything.** PDFs, slides, web pages, videos, scanned notes. Press `Ctrl+Shift+S`, drag
+  around a formula, and the LaTeX is already on your clipboard. You can also paste or drop an image.
+- **Private by design.** Recognition runs on your CPU. Your screenshots never leave your computer.
+- **Two local models.** A fast default for everyday formulas, and a larger one for long,
+  multi-line and matrix-heavy formulas. Each downloads once with one click and then works offline.
+- **Paste-ready output.** Copy as LaTeX, `$…$`, `$$…$$`, `\[…\]`, an `equation` environment, or
+  MathML for an editable Microsoft Word equation. Need a picture instead? **Copy Image** or **Save Image…** as PNG or SVG.
+- **Easy to correct.** Fix a symbol in the source and the preview updates as you type. Recent
+  results are kept in a searchable history.
+- **Stays out of your way.** Lives in the system tray and starts with Windows. Optionally copies in
+  the background and shows a small popup instead of opening the window.
+- English and 简体中文 interface, light and dark themes, and in-app updates.
 
-1. Open the [latest release](https://github.com/JhuoW/OpenMathpix/releases/latest) and download **OpenMathpix-portable.exe** from **Assets** (Windows x64).
-2. For local formula recognition, install the [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe) if it is not already installed.
-3. Double-click **OpenMathpix-portable.exe** to launch the portable app.
-4. Follow [Local formula recognition](#local-formula-recognition-recommended) below to test and use.
+## Download
 
-### Build from source (optional)
-
-Requires Node.js 22.12 or later and npm.
-
-```bash
-git clone git@github.com:JhuoW/OpenMathpix.git
-cd OpenMathpix
-npm install
-npm run dev
-npm run check      # TypeScript, ESLint, regression tests, production build
-npm run package
-```
+1. Download **OpenMathpix-Setup-&lt;version&gt;-x64.exe** from the
+   [latest release](https://github.com/JhuoW/OpenMathpix/releases/latest) (Windows 10 or 11, x64).
+2. Run it. The installer is not code-signed yet, so Windows SmartScreen may say
+   *Windows protected your PC*. Click **More info → Run anyway**. Each release also publishes a
+   `.sha256` checksum you can compare with `certutil -hashfile <file> SHA256`.
+3. Local models need the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe),
+   which most PCs already have. If a model fails to load, install it and try again.
 
 ## Getting started
 
-### Local formula recognition (recommended)
+1. **Pick a model.** On first launch, a short guide helps you choose and download a model
+   (about 120 MB), then tests it on a sample formula.
 
-1. Open **Settings**, choose **Local [MFR-1.5](https://huggingface.co/breezedeus/pix2text-mfr-1.5)**, then click **Download Local Model**.
-2. The first setup downloads about **120 MB** from the official Hugging Face repository.
-   Downloads show progress and verify SHA-256 hashes. Network access is needed for this step;
-   subsequent recognition works offline. If Hugging Face is slow or unreachable, switch
-   **Download source** to **hf-mirror.com (mirror)**; every file is verified against the same
-   pinned SHA-256 hashes, so a mirror cannot change what is installed.
-3. The app automatically loads and tests the model, then saves the working configuration. Wait
-   until the model is ready; no Save button is needed.
-4. Snip a single formula with a small margin, paste an image, or drop an image into the window.
+   <img src="image/readme/guide-en.png" alt="The first-run guide for choosing a model" width="90%" />
 
-No account, API token, Python, GPU, or local language-model server is required. In local mode,
-images are processed on your CPU in a separate background process. Sessions use two CPU threads,
-start loading the model as soon as a snip begins, stay warm for repeated snips, and are
-released after five minutes idle. There is no automatic
-cloud fallback. New installations select Local MFR-1.5 by default. On the first upgrade to
-this version, older settings switch to Local MFR-1.5 once; API credentials and the interface
-language are retained. Later engine choices are remembered across restarts. You can select
-the local engine before downloading its files; recognition becomes available after model setup.
+2. **Snip.** Press `Ctrl+Shift+S` in any app, or click **New Snip**. The screen dims; drag around
+   the formula, leaving a small margin. Press `Esc` or right-click to cancel.
 
-<div align="center">
-  <img src="instruct/MFR-example1.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
+   <img src="image/readme/snip.png" alt="Dragging a selection around a formula in a PDF" width="90%" />
 
-MFR recognizes **formula crops**. It does not parse mixed text/formula pages, tables or document
-layout. Markdown wraps the result in display math; Text preserves the LaTeX source. By default
-the model's tokenized output (`b ^ { 2 }`) is tidied into compact LaTeX (`b^{2}`): extra spaces,
-redundant braces and trailing row breaks are removed and `\left( \begin{matrix}` becomes
-`pmatrix`, without changing the rendered formula. Turn off **Tidy local model LaTeX** in Settings
-to keep the raw output. When the model was unsure about a symbol, the result shows a reminder
-to check it. Complex layouts, handwriting and unusual screenshots still need review. Blank/corrupt images, timeouts
-and generation length limits produce errors rather than copied partial output.
+3. **Paste.** The result is copied automatically. Change the default format in
+   **Settings → Output**, or use **Copy as** on the result page.
 
-#### Use a model downloaded manually
+## Choosing a model
 
-If a download fails or times out, check that your network or system proxy can access Hugging
-Face and its file download servers, then retry. The app uses the system proxy for downloads.
-You can also download the model with a browser or copy it from another computer:
+|                     | **MFR-1.5** (default)                   | **TexTeller**                                                |
+| ------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| Best for            | Single formulas, inline math            | Long, multi-line formulas, matrices, cases, aligned equations |
+| Speed               | Fastest                                 | Slower, most accurate                                        |
+| Download            | About 120 MB                            | About 320 MB                                                 |
+| Memory in use       | About 0.3 GB                            | About 0.8 GB                                                 |
 
-1. Open the [supported MFR-1.5 revision on Hugging Face](https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/1cef9f0bdcd6a4c63df7de1311fb0894593340cc)
-   and place these eight original files together in one folder:
+You can install both and switch any time in **Settings → Recognition**. Only the model in use is
+loaded, and it is released after a few idle minutes. **Local Models** lets you test a model on a
+sample formula, open its folder, or remove it.
 
-   ```text
-   encoder_model.onnx
-   decoder_model.onnx
-   config.json
-   generation_config.json
-   preprocessor_config.json
-   special_tokens_map.json
-   tokenizer.json
-   tokenizer_config.json
-   ```
-2. In **Settings → Local MFR-1.5**, click **Select Local Model** and select that folder.
-3. The app checks all eight files and their SHA-256 hashes, then loads the model and runs a
-   test formula. It remembers the folder only after these checks succeed. If validation or
-   loading fails, the previous working model remains selected.
+Downloads come from Hugging Face and every file is checked against a pinned SHA-256 hash. If
+Hugging Face is slow or blocked, open **Advanced model options** and switch **Download source** to
+**hf-mirror.com**. Cancelled downloads resume where they stopped.
 
-The selected folder is used directly, so keep it available and do not move or delete it.
-The saved selection is restored when you restart the app; no API configuration is required.
-
-When the model is ready, **Download Local Model** is disabled. Use **Clear Model Cache** in
-Settings to remove downloaded model files and deactivate the current local model; downloading
-becomes available again. Manually selected external folders and their original files are not deleted.
-
-The interface defaults to **English**. Choose **View → Language → English / 简体中文** to change it immediately.
-Your choice is saved for the next launch. Closing the window offers **Minimize to taskbar**,
-**Quit**, or **Cancel**; minimizing keeps the app and its screenshot shortcut running.
-
-### Optional PaddleOCR: get your API credentials
-
-1. Go to [https://aistudio.baidu.com/paddleocr](https://aistudio.baidu.com/paddleocr) and log in (or create a free Baidu AIStudio account).
-2. Click **"API"** button to access the model list. Then select a model (e.g. PaddleOCR-VL) to reveal the example code and your unique API URL and Access Token.
-
-<div align="center">
-  <img src="instruct/0.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
-3. Copy these two values from the example:
-
-- **API URL** — your unique endpoint, e.g. `https://xxxxxx.aistudio-app.com/layout-parsing`
-- **Access Token** — your authentication token (also at [https://aistudio.baidu.com/index/accessToken](https://aistudio.baidu.com/index/accessToken))
-
-> **Note:** Each model gets its own API URL (different subdomain). If you switch models, copy the new URL too.
-
-### Optional PaddleOCR: configure OpenMathpix
-
-1. Launch OpenMathpix.
-2. Click **Settings** in the toolbar.
-3. Select **PaddleOCR API**, then under **API Configuration**:
-   - Paste your **API URL**.
-   - Paste your **Access Token**.
-   - Select a **Pipeline** that matches the model you chose on AIStudio.
-4. Settings automatically verifies the configuration with a small test image and saves it
-   when successful. Wait for the saved status; if verification fails, correct the fields and
-   the app will try again. The previously working configuration remains active until then.
-
-<div align="center">
-  <img src="instruct/1.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
-
-### Capture and recognize
-
-#### Screen snip
-
-Click **New Snip** in the toolbar, or press the snip hotkey from any application, to dim the screen.
-
-<div align="center">
-  <img src="instruct/2.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
-
-Click and drag to select a region, then release to capture. Press `Esc` or right-click to cancel.
-
-After a snip, OpenMathpix either shows the result window (default) or, with **After a snip →
-Copy in the background**, stays out of your way: the result is copied in your chosen format and a
-system notification shows what was copied. Click the notification to open the result.
-
-<div align="center">
-  <img src="instruct/3.png" width="50%" style="margin: 0 1.5%;"/>
-  <img src="instruct/4.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
-
-## Viewing results
-
-After recognition, results appear in four tabs:
-
-| Tab                | Description                                                  |
-| ------------------ | ------------------------------------------------------------ |
-| **LaTeX**    | The snip, the formula rendered via KaTeX, and its editable LaTeX source. |
-| **Markdown** | Structured output (headings, tables, inline math) with editable source.  |
-| **Text**     | Plain text with all formatting stripped, editable.                       |
-| **Image**    | The original captured screenshot.                                        |
-
-Correct a misread symbol directly in the source: the preview updates as you type, copies use your
-version, and the change is saved to history. **Reset** restores the recognized result.
-
-Click **Copy** to copy the active tab; the default format is also copied automatically after each
-recognition. On the LaTeX tab, **Copy as** copies the formula as plain LaTeX, `$…$`, `$$…$$`,
-`\[…\]`, an `equation` environment, or **MathML**, which pastes into Microsoft Word as an editable
-equation. Choose the style used for automatic copying in **Settings → LaTeX copy style**.
-
-## Pipelines
-
-| Pipeline                   | Best for                               | Output                   |
-| -------------------------- | -------------------------------------- | ------------------------ |
-| **MFR-1.5 (local)**  | Single formula screenshots             | LaTeX + display Markdown |
-| **PP-OCRv5**         | General text (CJK + English)           | Text only                |
-| **PP-StructureV3**   | Math, tables, charts, mixed layout     | Markdown + LaTeX         |
-| **PaddleOCR-VL**     | Vision-language document parsing       | Markdown + LaTeX         |
-| **PaddleOCR-VL-1.5** | Higher accuracy, seal & irregular text | Markdown + LaTeX         |
-
-> Each pipeline has its own API URL on AIStudio. When switching pipelines, update the URL in Settings to match.
-
-## Settings
-
-| Setting        | Default          | Description                                                            |
-| -------------- | ---------------- | ---------------------------------------------------------------------- |
-| OCR Engine     | Local MFR-1.5    | Offline formulas or PaddleOCR API; saved API credentials are retained. |
-| API URL        | —               | Your PaddleOCR AIStudio endpoint.                                      |
-| Access Token   | —               | Stored encrypted on disk via safeStorage.                              |
-| Pipeline       | PP-StructureV3   | Which OCR pipeline to use.                                             |
-| Download source | Hugging Face    | Hugging Face or the hf-mirror.com mirror for the local model.          |
-| Snip Hotkey    | `Ctrl+Shift+S` | Global shortcut for screen capture. Click the field and press keys.    |
-| After a snip   | Show window      | Show the result window, or copy in the background with a notification. |
-| Default Output | LaTeX            | Tab opened and format auto-copied after recognition.                   |
-| LaTeX copy style | LaTeX          | Plain, `$…$`, `$$…$$`, `\[…\]`, `equation`, or MathML (Word).         |
-| Tidy local model LaTeX | On       | Compact the local model's tokenized LaTeX without changing the formula. |
-| Theme          | System           | Light / Dark / System.                                                 |
-| History Limit  | 100              | Max saved recognitions (10–500).                                      |
-
-**Self-hosted:** Set the API URL to your local server (e.g. `http://localhost:8080`) and leave the token empty.
-
-Settings save automatically and take effect after validation. Text fields apply after a short
-pause in typing or when you leave the field; dropdowns and switches apply on selection. Model
-and API changes show their validation or loading status. Failed changes leave the previous
-working configuration active, and successfully saved settings are restored on restart.
-
-An unavailable hotkey, invalid URL or history limit, model loading failure, or unavailable
-system keyring is reported in Settings so you can correct it without losing the working setup.
-
-## History
-
-Click **History** in the toolbar to browse past recognitions. Each entry shows a thumbnail, timestamp, and a rendered preview of the formula. Use the search bar to filter, copy an entry directly, or click it to re-open and keep editing its result.
-
-<div align="center">
-  <img src="instruct/5.png" width="50%" style="margin: 0 1.5%;"/>
-</div>
-
-## System tray
-
-Closing the window minimizes to tray. Right-click the tray icon for:
-
-- **Snip** — start capture
-- **Open Window** — show main window
-- **Settings** — open settings
-- **Quit** — exit
+<p align="center">
+  <img src="image/readme/settings-en.png" alt="Recognition settings with both local models installed" width="460" />
+</p>
 
 ## Keyboard shortcuts
 
-| Shortcut         | Action                      |
-| ---------------- | --------------------------- |
-| `Ctrl+Shift+S` | Screen snip (global)        |
-| `Ctrl+V`       | Paste image for recognition |
-| `Escape` / right-click | Cancel snip         |
+| Shortcut              | Action                                  |
+| --------------------- | --------------------------------------- |
+| `Ctrl+Shift+S`        | Snip from any app (change in Settings)  |
+| `Ctrl+N`              | New snip from the app window            |
+| `Ctrl+V`              | Recognize a pasted image                |
+| `Ctrl+Shift+V`        | Recognize the image on the clipboard    |
+| `Ctrl+Shift+C`        | Copy the current result                 |
+| `Ctrl+1` / `Ctrl+2`   | Result / History                        |
+| `Ctrl+,`              | Settings                                |
+| `Esc` / right-click   | Cancel a snip                           |
+
+## More
+
+<details>
+<summary><b>Text, tables and whole pages with PaddleOCR (optional, online)</b></summary>
+
+<br />
+
+The local models read formulas. For text, tables and mixed document pages, you can connect the
+[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) service from Baidu AI Studio (free account)
+or your own PaddleOCR server. With this engine, your snips are sent to that service.
+
+1. Sign in at [aistudio.baidu.com/paddleocr](https://aistudio.baidu.com/paddleocr), click **API**,
+   choose a model, and copy the `API_URL` and `TOKEN` from the example code.
+
+   <img src="image/readme/aistudio-api.png" alt="Where to find the API URL and token on AI Studio" width="420" />
+
+2. In **Settings → Recognition**, choose **PaddleOCR API**, paste the **API URL** and
+   **Access Token**, and select the matching **Pipeline**.
+3. Click **Connect & Use**. OpenMathpix sends one small test image and switches to PaddleOCR only
+   if it works. The token is stored encrypted.
+
+   <img src="image/readme/paddle-en.png" alt="PaddleOCR settings" width="420" />
+
+| Pipeline           | Best for                                   |
+| ------------------ | ------------------------------------------ |
+| PP-OCRv5           | Plain text, Chinese and English            |
+| PP-StructureV3     | Formulas, tables, charts and mixed layouts |
+| PaddleOCR-VL       | Document parsing with a vision-language model |
+| PaddleOCR-VL-1.5   | Higher accuracy, seals and irregular text  |
+
+Each pipeline has its own API URL. Update the URL when you switch pipelines. For a self-hosted
+server, enter its address (for example `http://localhost:8080`) and leave the token empty.
+
+</details>
+
+<details>
+<summary><b>Install a model without the in-app download</b></summary>
+
+<br />
+
+Download the files below with a browser (or copy them from another computer), put them in one
+folder, then choose **Settings → Recognition → Local Models → Import…** and select that folder.
+OpenMathpix checks every file and uses the folder in place, so keep it where it is.
+
+- **MFR-1.5**, from [this revision](https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/1cef9f0bdcd6a4c63df7de1311fb0894593340cc):
+  `encoder_model.onnx`, `decoder_model.onnx`, `config.json`, `generation_config.json`,
+  `preprocessor_config.json`, `special_tokens_map.json`, `tokenizer.json`, `tokenizer_config.json`
+- **TexTeller**, from [this revision](https://huggingface.co/onnx-community/TexTeller3-ONNX/tree/ed90c6164810242882ca90863bb85697a76f4841):
+  `onnx/encoder_model_int8.onnx`, `onnx/decoder_model_merged_int8.onnx`, `config.json`,
+  `generation_config.json`, `preprocessor_config.json`, `tokenizer.json`
+  (put the two `.onnx` files next to the others, not in a subfolder)
+
+</details>
+
+<details>
+<summary><b>Build from source</b></summary>
+
+<br />
+
+Requires Node.js 22.12 or later.
+
+```bash
+git clone https://github.com/JhuoW/OpenMathpix.git
+cd OpenMathpix
+npm install
+npm run dev        # run the app in development mode
+npm run check      # type check, lint, tests and production build
+npm run package    # build the Windows installer into dist/
+```
+
+</details>
+
+## Privacy
+
+With a local model, images are recognized on your computer and are never uploaded. OpenMathpix
+goes online only to download a model or when you choose **Help → Check for Updates**. If you
+connect PaddleOCR, your snips are sent to the service you configured.
 
 ## License
 
-GNU Affero General Public License v3.0 ([AGPL-3.0-only](LICENSE)).
+OpenMathpix is licensed under the [GNU AGPL v3.0](LICENSE) (AGPL-3.0-only).
 
-Third-party components and model weights retain their respective licenses. See
-[Third-party notices](THIRD_PARTY_NOTICES.md).
+It builds on [Pix2Text MFR](https://github.com/breezedeus/Pix2Text),
+[TexTeller](https://github.com/OleehyO/TexTeller), [ONNX Runtime](https://onnxruntime.ai),
+[KaTeX](https://katex.org), [MathJax](https://www.mathjax.org) and
+[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR). Their code and model weights keep their
+own licenses; see [Third-party notices](THIRD_PARTY_NOTICES.md).

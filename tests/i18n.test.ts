@@ -11,10 +11,39 @@ test('model setup and cache actions have English and Chinese copy', () => {
   assert.equal(translate('zh-CN', 'Settings'), '设置');
 });
 
+test('model import, automatic setup and repair guidance use the new bilingual actions', () => {
+  assert.equal(translate('en', 'Import Existing Model...'), 'Import Existing Model...');
+  assert.equal(translate('zh-CN', 'Import Existing Model...'), '导入已有模型…');
+  assert.equal(translate('zh-CN', 'Recommended'), '推荐');
+  assert.match(
+    translate('zh-CN', 'Model setup complete. Click New Snip in the top-right corner to start.'),
+    /右上角.*新建截图/,
+  );
+  assert.match(
+    localizeError(
+      'zh-CN',
+      'MFR-1.5 model is not ready. Download it or use Import Existing Model in Settings.',
+    ),
+    /导入已有模型/,
+  );
+});
+
 test('translated labels interpolate paths without translating or interpreting their contents', () => {
   const path = 'C:\\Settings\\History\\Text\\{model}';
   assert.equal(translate('zh-CN', 'Model folder: {path}', { path }), `模型目录：${path}`);
   assert.equal(translate('en', 'Model folder: {path}', { path }), `Model folder: ${path}`);
+});
+
+test('engine activation and local model setup have clear localized messages', () => {
+  assert.equal(translate('en', 'Local TexTeller'), 'Local TexTeller');
+  assert.notEqual(translate('zh-CN', 'Local TexTeller'), 'Local TexTeller');
+  assert.match(translate('zh-CN', '{model} is ready', { model: 'TexTeller' }), /TexTeller/);
+  assert.match(
+    translate('en', 'Offline formula recognition, about {size} MB, no API account needed', {
+      size: 179,
+    }),
+    /179 MB/,
+  );
 });
 
 test('common IPC errors and composed success/warning toasts follow the selected language', () => {

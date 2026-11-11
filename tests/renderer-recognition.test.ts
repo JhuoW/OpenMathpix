@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createRecognizer } from '../src/renderer/recognition';
+import { createRecognizer, describeCopy, type CopiedOutcome } from '../src/renderer/recognition';
 import type { OCRResult } from '../src/shared/types';
 
 type Dependencies = Parameters<typeof createRecognizer>[0];
@@ -155,6 +155,22 @@ test('background recognition reports the copied text or the error', async () => 
     notify: (outcome) => outcomes.push(outcome),
   });
   await failing.recognize('image');
-  assert.deepEqual(outcomes, [{ copied: result.latex }, { error: 'Model missing' }]);
+  assert.deepEqual(outcomes, [
+    { copied: result.latex, source: result.latex },
+    { error: 'Model missing' },
+  ]);
   assert.equal(failing.state().error, 'Model missing');
+});
+
+test('a MathML copy is described by its formula, not by XML markup', async () => {
+  const outcomes: CopiedOutcome[] = [];
+  const mathml = '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math>';
+  const app = setup({
+    copyFor: () => mathml,
+    notify: (outcome) => outcomes.push(outcome as CopiedOutcome),
+  });
+  await app.recognize('image');
+  assert.deepEqual(outcomes, [{ copied: mathml, source: result.latex }]);
+  assert.deepEqual(describeCopy(outcomes[0]), { mathml: true, body: result.latex });
+  assert.deepEqual(describeCopy({ copied: '$x$', source: 'x' }), { mathml: false, body: '$x$' });
 });

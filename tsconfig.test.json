@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["tests/**/*.test.ts"]
+  "include": ["tests/**/*.test.ts", "src/preload/index.d.ts"]
 }

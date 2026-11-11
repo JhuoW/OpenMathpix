@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { createMfrEngine, type MfrEngine } from '../services/mfr-engine';
+import { createTextellerEngine } from '../services/texteller-engine';
 
 interface Request {
   id: number;
@@ -11,7 +12,9 @@ let engine: Promise<MfrEngine> | undefined;
 let busy = false;
 
 function loadEngine(modelDir: string): Promise<MfrEngine> {
-  engine ??= createMfrEngine(modelDir).catch((error: unknown) => {
+  engine ??= (
+    process.argv.includes('texteller') ? createTextellerEngine(modelDir) : createMfrEngine(modelDir)
+  ).catch((error: unknown) => {
     // A failed load must be retried, and reported, by the next recognition request.
     engine = undefined;
     throw error;

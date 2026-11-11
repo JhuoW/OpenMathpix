@@ -6,6 +6,7 @@ docs/
 .DS_Store
 Thumbs.db
 .test-dist/
+.tmp-latexocr/
 *.tsbuildinfo
 __pycache__/
 *.pyc

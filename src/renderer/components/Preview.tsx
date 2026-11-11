@@ -7,6 +7,8 @@ import { useI18n } from '../hooks/useI18n';
 import { isEdited } from '../result-edit';
 import type { OCRResult } from '../../shared/types';
 import FormulaPreview from './FormulaPreview';
+import GetStarted from './GetStarted';
+import { engineIsActive } from '../engine-status';
 import SourceEditor from './SourceEditor';
 import CopyStyleBar from './CopyStyleBar';
 import Kbd from './Kbd';
@@ -20,50 +22,49 @@ export const imageSource = (image: string) =>
   `data:image/png;base64,${image}`;
 
 export default function Preview() {
-  const { ocrResult, activeTab, currentImage, settings, mfrStatus } = useAppStore();
+  const {
+    ocrResult,
+    activeTab,
+    currentImage,
+    settings,
+    mfrStatus,
+    textellerStatus,
+    engineStatuses,
+    guideActive,
+  } = useAppStore();
 
-  if (activeTab === 'image') return <ImageView image={currentImage} />;
+  // Without a result the format tabs are hidden, so the start page must not stay on Image.
+  if (activeTab === 'image' && (ocrResult || currentImage))
+    return <ImageView image={currentImage} />;
   if (!ocrResult) {
-    if (settings?.ocrEngine === 'mfr' && mfrStatus?.state !== 'ready') return <ModelSetupPrompt />;
-    return <EmptyState />;
+    if (!settings) return <EmptyState />;
+    // Until an engine works, the start page guides setup; it also stays for its last step.
+    if (guideActive) return <GetStarted />;
+    if (engineIsActive(settings.ocrEngine, settings, engineStatuses, mfrStatus, textellerStatus))
+      return <EmptyState />;
+    if (!engineStatuses || engineStatuses[settings.ocrEngine].state === 'checking')
+      return <Preparing />;
+    return <GetStarted />;
   }
   if (activeTab === 'latex') return <LatexView result={ocrResult} />;
   if (activeTab === 'markdown') return <MarkdownView result={ocrResult} />;
   return <TextView result={ocrResult} />;
 }
 
-function ModelSetupPrompt() {
+/** The saved engine is starting up, e.g. a local model loading after launch. */
+function Preparing() {
   const { t } = useI18n();
-  const { mfrStatus, setCurrentPage } = useAppStore();
-  const preparing = ['validating', 'loading', 'clearing'].includes(mfrStatus?.state || '');
+  const engine = useAppStore((state) => state.settings?.ocrEngine);
+  const name =
+    engine === 'mfr' ? 'MFR-1.5' : engine === 'texteller' ? 'TexTeller' : 'PaddleOCR API';
   return (
     <div className="flex-1 flex items-center justify-center px-8 text-center">
-      <div className="max-w-sm space-y-3">
-        <p className="text-sm font-medium">
-          {mfrStatus?.state === 'clearing'
-            ? t('Clearing model cache...')
-            : mfrStatus?.state === 'validating'
-              ? t('Verifying your local formula model')
-              : mfrStatus?.state === 'loading'
-                ? t('Loading and testing your local formula model')
-                : mfrStatus?.state === 'downloading'
-                  ? t('Your local formula model is downloading')
-                  : t('Set up local formula recognition')}
-        </p>
+      <div role="status" className="max-w-sm space-y-3">
+        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+        <p className="text-sm font-medium">{t('Loading {model}...', { model: name })}</p>
         <p className="text-sm text-gray-500">
-          {preparing
-            ? t('The model will be available when verification and initialization finish.')
-            : t(
-                'Download MFR-1.5 once (about 120 MB), or select an existing model folder, to recognize formulas offline.',
-              )}
+          {t('The model will be available when verification and initialization finish.')}
         </p>
-        <button onClick={() => setCurrentPage('settings')} className="btn-primary">
-          {preparing
-            ? t('View Model Status')
-            : mfrStatus?.state === 'downloading'
-              ? t('View Download')
-              : t('Open Model Settings')}
-        </button>
       </div>
     </div>
   );

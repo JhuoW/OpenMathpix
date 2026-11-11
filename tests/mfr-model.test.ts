@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { PassThrough, Readable } from 'node:stream';
 import { test, type TestContext } from 'node:test';
 import {
+  DOWNLOAD_CANCELLED,
   MfrModelManager,
   mfrDownloadError,
   validateMfrDirectory,
@@ -149,22 +150,63 @@ test('failed downloads retain verified files and retry only incomplete files', a
   assert.equal((await manager.getStatus()).error, undefined);
 });
 
-test('a failed network stream leaves no partial file or unverified destination', async (t) => {
+test('a failed network stream keeps the received part and the retry resumes from it', async (t) => {
   const dir = await directory(t);
   const file = modelFile('model.onnx', 'model');
-  const manager = new MfrModelManager(dir, undefined, [file], async () =>
-    Readable.from(
-      (async function* () {
-        yield Buffer.from('mo');
-        throw new Error('Connection closed');
-      })(),
-    ),
-  );
+  const starts: number[] = [];
+  let attempt = 0;
+  const manager = new MfrModelManager(dir, undefined, [file], async (_file, _signal, start) => {
+    starts.push(start ?? 0);
+    attempt += 1;
+    if (attempt === 1)
+      return Readable.from(
+        (async function* () {
+          yield Buffer.from('mo');
+          // The received bytes reach the disk before the connection drops.
+          await new Promise((done) => setTimeout(done, 50));
+          throw new Error('Connection closed');
+        })(),
+      );
+    // The server honours the range request and sends only the rest.
+    return { body: Readable.from([Buffer.from('del')]), start: start ?? 0 };
+  });
 
   await assert.rejects(manager.download(), /Connection closed/);
   assert.equal((await manager.getStatus()).state, 'error');
   await assert.rejects(access(join(dir, file.name)));
+  assert.equal(await readFile(join(dir, `${file.name}.part`), 'utf8'), 'mo');
+
+  await manager.download();
+  assert.deepEqual(starts, [0, 2]);
+  assert.equal((await manager.getStatus()).state, 'ready');
+  assert.equal(await readFile(join(dir, file.name), 'utf8'), 'model');
   await assert.rejects(access(join(dir, `${file.name}.part`)));
+});
+
+test('a server that ignores the range restarts the file, and a wrong partial file is never kept', async (t) => {
+  const dir = await directory(t);
+  const file = modelFile('model.onnx', 'model');
+  await writeFile(join(dir, `${file.name}.part`), 'XX');
+  const starts: number[] = [];
+  const manager = new MfrModelManager(dir, undefined, [file], async (_file, _signal, start) => {
+    starts.push(start ?? 0);
+    // A plain response: the whole file from byte 0.
+    return Readable.from([Buffer.from('model')]);
+  });
+  assert.equal((await manager.getStatus()).downloadedBytes, 2, 'partial bytes count as progress');
+  await manager.download();
+  assert.deepEqual(starts, [2]);
+  assert.equal(await readFile(join(dir, file.name), 'utf8'), 'model');
+
+  // A partial file with wrong bytes fails verification and is removed for a clean retry.
+  const other = await directory(t);
+  await writeFile(join(other, `${file.name}.part`), 'XX');
+  const corrupt = new MfrModelManager(other, undefined, [file], async (_file, _signal, start) => ({
+    body: Readable.from([Buffer.from('del')]),
+    start: start ?? 0,
+  }));
+  await assert.rejects(corrupt.download(), /integrity check failed/);
+  await assert.rejects(access(join(other, `${file.name}.part`)));
 });
 
 test('concurrent download calls share one task and one network request', async (t) => {
@@ -189,30 +231,36 @@ test('concurrent download calls share one task and one network request', async (
   assert.equal((await manager.getStatus()).state, 'ready');
 });
 
-test('cancelling an in-progress download cleans temporary data and permits retry', async (t) => {
+test('cancelling keeps what was received, reports no error, and the next download resumes', async (t) => {
   const dir = await directory(t);
   const file = modelFile('model.onnx', 'model');
   const started = deferred();
   const source = new PassThrough();
-  let retry = false;
-  const manager = new MfrModelManager(dir, undefined, [file], async () => {
+  const starts: number[] = [];
+  const manager = new MfrModelManager(dir, undefined, [file], async (_file, _signal, start) => {
+    starts.push(start ?? 0);
     started.resolve();
-    return retry ? Readable.from([Buffer.from('model')]) : source;
+    return starts.length === 1
+      ? source
+      : { body: Readable.from([Buffer.from('del')]), start: start ?? 0 };
   });
 
   const task = manager.download();
-  const rejection = assert.rejects(task, /cancelled/);
+  const rejection = assert.rejects(task, (error: Error) => error.message === DOWNLOAD_CANCELLED);
   await started.promise;
-  source.write('mo');
+  await new Promise<void>((done) => source.write('mo', () => done()));
+  await new Promise((done) => setTimeout(done, 20));
   manager.cancel();
   await rejection;
-  assert.equal((await manager.getStatus()).state, 'error');
+  const cancelled = await manager.getStatus();
+  assert.equal(cancelled.state, 'not-downloaded');
+  assert.equal(cancelled.error, undefined);
+  assert.equal(cancelled.downloadedBytes, 2);
   assert.ok(source.destroyed);
   await assert.rejects(access(join(dir, file.name)));
-  await assert.rejects(access(join(dir, `${file.name}.part`)));
 
-  retry = true;
   await manager.download();
+  assert.deepEqual(starts, [0, 2]);
   assert.equal((await manager.getStatus()).state, 'ready');
 });
 
@@ -229,7 +277,7 @@ test('cancelling immediately after download starts is not lost during initializa
   manager.cancel();
   await assert.rejects(task, /cancelled/);
   assert.equal(calls, 0);
-  assert.equal((await manager.getStatus()).state, 'error');
+  assert.equal((await manager.getStatus()).state, 'not-downloaded');
   await assert.rejects(access(join(dir, file.name)));
 });
 
@@ -254,7 +302,7 @@ test('cancellation after the final file is installed does not emit a later ready
   );
 
   await assert.rejects(manager.download(), /cancelled/);
-  assert.equal((await manager.getStatus()).state, 'error');
+  assert.equal((await manager.getStatus()).state, 'not-downloaded');
   assert.equal((await manager.getStatus()).modelPath, undefined);
   assert.ok(statuses.every((status) => status.state !== 'ready'));
   // A completely verified file is still reusable on the next attempt.
@@ -298,7 +346,16 @@ test('verified imports can be reopened offline, including Hugging Face snapshot 
   const body = 'local verified weights';
   const file = modelFile('model.onnx', body);
   await writeFile(join(dir, 'weights-blob'), body);
-  await symlink(join(dir, 'weights-blob'), join(dir, file.name));
+  try {
+    await symlink(join(dir, 'weights-blob'), join(dir, file.name));
+  } catch (error) {
+    // Windows allows symbolic links only with Developer Mode or administrator rights.
+    if ((error as NodeJS.ErrnoException).code === 'EPERM' && process.platform === 'win32') {
+      t.skip('creating symbolic links requires Developer Mode on Windows');
+      return;
+    }
+    throw error;
+  }
   await validateMfrDirectory(dir, [file]);
   const restarted = new MfrModelManager(dir, undefined, [file], async () => {
     throw new Error('Import and restart must not fetch');
@@ -314,7 +371,7 @@ test('download network errors explain manual model selection without exposing ra
   ]) {
     const message = mfrDownloadError(new Error(detail));
     assert.match(message, /network or system proxy/);
-    assert.match(message, /Select Local Model/);
+    assert.match(message, /Import Existing Model/);
     assert.doesNotMatch(message, /10\.0\.0\.1/);
   }
   assert.match(mfrDownloadError(new Error('cancelled'), true), /cancelled or timed out/);

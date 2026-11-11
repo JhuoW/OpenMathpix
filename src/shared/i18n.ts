@@ -7,14 +7,216 @@ const chinese = {
   Settings: '设置',
   'New Snip': '新建截图',
   'Local MFR-1.5': '本地 MFR-1.5',
+  'Local TexTeller': '本地 TexTeller',
+  'Paused {percent}%': '已暂停 {percent}%',
+  'A picture of the formula, for slides and chat apps without LaTeX':
+    '公式图片，适合不支持 LaTeX 的幻灯片和聊天软件',
+  'Cancel {model} download': '取消下载 {model}',
+  'Cancel Download': '取消下载',
+  'Copy Image': '复制图片',
+  'Development build: the installer was saved to {file}':
+    '开发版本不会安装更新，安装包已保存到 {file}',
+  Discard: '删除',
+  'Discard {model} download': '删除已下载的部分 {model}',
+  'Download cancelled. Download again to continue where it stopped.':
+    '下载已取消。再次下载会从中断处继续。',
+  'Downloading OpenMathpix {version}...': '正在下载 OpenMathpix {version}…',
+  'Image saved: {file}': '图片已保存：{file}',
+  Later: '稍后',
+  'OpenMathpix {version} is ready. Restart to install it; your data is kept.':
+    'OpenMathpix {version} 已下载。重启即可完成安装，数据会保留。',
+  'Restart and Install': '重启并安装',
+  Resume: '继续下载',
+  'Resume {model} download': '继续下载 {model}',
+  'Resume Download': '继续下载',
+  'Save as PNG, or as SVG for sharp scaling in slides and documents':
+    '保存为 PNG，或保存为可无损缩放的 SVG（适合幻灯片和文档）',
+  'Save Image...': '保存图片…',
+  'Update download': '更新下载进度',
+  'Update failed: {message}': '更新失败：{message}',
+  'Copied as an image!': '已复制为图片！',
+  'There is no result to copy yet.': '还没有可复制的识别结果。',
+  'This LaTeX cannot be turned into an image. Check the source for errors.':
+    '无法将此 LaTeX 生成图片，请检查源码是否有误。',
+  'The update checksum file is invalid.': '更新的校验文件无效。',
+  'The update checksum does not match GitHub’s record.': '更新的校验值与 GitHub 记录不一致。',
+  'The update has an unexpected size.': '更新文件大小异常。',
+  'The downloaded update is incomplete or damaged. Please try again.':
+    '下载的更新不完整或已损坏，请重试。',
+  'The update download stalled. Check your connection and try again.':
+    '更新下载已停滞，请检查网络后重试。',
+  'Could not download the update.': '无法下载更新。',
+  'Start OpenMathpix when I sign in': '登录 Windows 时自动启动 OpenMathpix',
+  'It starts in the notification area, so the snip hotkey works right away.':
+    '启动后位于通知区域（托盘），截图快捷键可立即使用。',
+  '{model} is installed. Choose it under Recognition Engine to use it.':
+    '{model} 已安装。在“识别引擎”中选择它即可使用。',
+  'About {size} MB': '约 {size} MB',
+  'About {size} MB download': '下载约 {size} MB',
+  'Already have the model files, or prefer the PaddleOCR cloud API?':
+    '已有模型文件，或想使用 PaddleOCR 云端 API？',
+  'Also available from the View → Language menu.': '也可通过“视图 → 语言”菜单切换。',
+  'Best for long, multi-line and complex formulas.': '最适合长公式、多行公式和复杂公式。',
+  'Change {model} storage location': '更改 {model} 的存储位置',
+  'Checking and loading {model}...': '正在检查并加载 {model}…',
+  'Choose a model': '选择模型',
+  'Clear History...': '清空历史记录…',
+  'Deletes every saved snip and its result. Settings and models are kept.':
+    '删除所有保存的截图及识别结果。设置和模型会保留。',
+  Disconnect: '断开',
+  'Disconnect {model}': '断开 {model}',
+  Done: '完成',
+  Download: '下载',
+  'Download {model}': '下载 {model}',
+  'Download, test or remove each model here. This does not change the engine in use.':
+    '可在这里分别下载、测试或删除各个模型，不会改变正在使用的引擎。',
+  'Downloading {percent}%': '正在下载 {percent}%',
+  'Fast and small. Handles most everyday formulas.': '速度快、体积小，适合大多数常见公式。',
+  General: '通用',
+  'Import {model}...': '导入 {model}…',
+  'Import...': '导入…',
+  Language: '语言',
+  'Loading {model}...': '正在加载 {model}…',
+  'Local Models': '本地模型',
+  'Matches the original formula': '与原公式一致',
+  'Model loaded in {seconds} s': '模型加载用时 {seconds} 秒',
+  'Most accurate': '最准确',
+  'Needs attention': '需要处理',
+  'Not installed': '未安装',
+  'Open {model} folder': '打开 {model} 所在文件夹',
+  'Open Settings': '打开设置',
+  'Open the model folder': '打开模型文件夹',
+  Recognition: '识别',
+  'Recognition history': '识别历史',
+  'Recognize a sample formula': '识别示例公式',
+  'Recognize a sample formula with this model': '用此模型识别一个示例公式',
+  'Recognized in {seconds} s': '识别用时 {seconds} 秒',
+  'Recognizing the sample formula...': '正在识别示例公式…',
+  'Recognizing with {model}...': '正在使用 {model} 识别…',
+  'Sample formula image': '示例公式图片',
+  'Sample formula test': '示例公式测试',
+  'Set up offline formula recognition. Your screenshots never leave this computer.':
+    '设置离线公式识别。截图只在本机处理，不会上传。',
+  'Settings sections': '设置分类',
+  'Setup steps': '设置步骤',
+  'Snip a formula': '截取公式',
+  Test: '测试',
+  'Test {model}': '测试 {model}',
+  'This continues in the background; you can switch to other apps.':
+    '下载会在后台继续，您可以先切换到其他应用。',
+  'Try it': '试一试',
+  'Try it on a sample formula, then snip your own from any app.':
+    '先用示例公式试一试，然后就可以在任意应用中截取公式了。',
+  Uninstall: '卸载',
+  'Uninstall {model}': '卸载 {model}',
+  'Use {model}': '使用 {model}',
+  'Use a different {model} folder': '改用其他 {model} 文件夹',
+  'Welcome to OpenMathpix': '欢迎使用 OpenMathpix',
+  'History cleared.': '历史记录已清空。',
+  Installed: '已安装',
+  'Downloading...': '正在下载…',
+  '{engine} stays in use until this model is installed.': '此模型安装完成前，将继续使用{engine}。',
+  'Model uninstalled. Switched to {model}.': '模型已卸载，已切换到 {model}。',
+  'Model disconnected. Switched to {model}.': '已断开模型，已切换到 {model}。',
+  'Most accurate offline model for long and complex formulas':
+    '最准确的离线模型，擅长长公式和复杂公式',
+  'Downloading {model}...': '正在下载 {model}…',
+  '{model} is ready': '{model} 已就绪',
+  '{model} model download': '{model} 模型下载进度',
+  '{model} model files': '{model} 模型文件',
+  'Offline formula recognition, about {size} MB, no API account needed':
+    '离线公式识别 · 约 {size} MB · 无须 API 账号',
+  'Select an accessible folder containing the TexTeller model files.':
+    '请选择包含 TexTeller 模型文件且可访问的文件夹。',
+  'Download all six original files from the linked TexTeller revision into one folder (without the onnx subfolder), then select that folder.':
+    '请从链接中的 TexTeller 版本页面下载全部六个原始文件，放在同一个文件夹中（不要保留 onnx 子文件夹），再选择该文件夹。',
+  'You can also download the six model files from Hugging Face and use Import Existing Model.':
+    '也可以从 Hugging Face 手动下载六个模型文件，然后点击“导入已有模型”。',
+  'TexTeller model is not ready. Download it or use Import Existing Model in Settings.':
+    'TexTeller 模型尚未就绪，请在设置中下载模型或点击“导入已有模型”。',
+  'The local model is inactive. Download or import a model in Settings first.':
+    '本地模型尚未启用，请先在设置中下载或导入模型。',
+  'Model removal was incomplete. Retry Uninstall Model in Settings.':
+    '模型未完全移除，请在设置中再次点击“卸载模型”。',
+  Recommended: '推荐',
+  Inactive: '未启用',
+  'Checking...': '正在检查…',
+  'Connecting...': '正在连接…',
+  'Connect & Use': '连接并使用',
+  Cancel: '取消',
+  'Choose an engine and complete its setup below.': '选择识别引擎，然后完成下方配置。',
+  'Choose a model folder outside the OpenMathpix installation folder so updates and uninstall can preserve it.':
+    '请选择 OpenMathpix 安装文件夹之外的模型目录，避免更新或卸载软件时删除模型文件。',
+  'Click Connect & Use to apply this engine. Other preferences save automatically.':
+    '点击“连接并使用”以启用此引擎，其他偏好设置会自动保存。',
+  'Leave blank if your self-hosted server does not require authentication.':
+    '自行部署且无需身份验证的服务可留空。',
+  'Connect runs one test recognition request and enables this engine after success.':
+    '连接时会进行一次测试识别请求，成功后自动启用此引擎。',
+  'Removing model...': '正在移除模型…',
+  '{model} is installed': '{model} 已安装',
+  '{model} is not installed': '尚未安装 {model}',
+  'Click New Snip in the top-right corner to start.': '点击右上角“新建截图”即可开始使用。',
+  'Offline formula recognition, about 120 MB, no API account needed':
+    '离线公式识别 · 约 120 MB · 无须 API 账号',
+  or: '或',
+  'Choose one. The model is checked and enabled automatically.':
+    '任选一种方式，模型会自动检查并启用。',
+  'Uninstall Model': '卸载模型',
+  'Disconnect Model': '断开模型',
+  'Advanced model options': '高级模型选项',
+  'Saved for future downloads. Existing model files stay where they are.':
+    '此位置用于之后的下载，已有模型文件会保留在原目录。',
+  'Use the mirror if the official download is slow or unavailable.':
+    '官方下载缓慢或无法访问时，可使用镜像。',
+  'Download these files into one folder, then choose Import Existing Model.':
+    '将以下文件下载到同一文件夹，再选择“导入已有模型”。',
+  'Model disconnected. Your files were kept.': '模型已断开，原文件已保留。',
+  'Local model uninstalled. Download or import a model to use it again.':
+    '本地模型已卸载，重新下载或导入后即可使用。',
+  'Testing connection...': '正在测试连接…',
+  'Connection unavailable': '连接不可用',
+  'Use Connect & Use to validate and enable this engine.': '请点击“连接并使用”验证并启用此引擎。',
+  'Invalid local model state.': '本地模型状态无效。',
+  'Image exceeds 25 MB. Please capture a smaller formula region.':
+    '图片超过 25 MB，请截取更小的公式区域。',
+  'Automatic download': '自动下载',
+  'Or import an existing model': '或导入已有模型',
+  'Import Existing Model...': '导入已有模型…',
+  'Model storage location': '模型存储位置',
+  'Application data folder (default)': '应用数据目录（默认）',
+  'Change...': '更改…',
+  'Download folder: {path}': '下载目录：{path}',
+  'This location is saved for future downloads. Existing model files are kept in their current folder.':
+    '此位置会保存并用于之后的下载。已有模型文件仍保留在原目录。',
+  'Download the model automatically (about 120 MB), or import files you already have. Choose either option; both verify and configure the model for you.':
+    '自动下载模型（约 120 MB），或导入已有模型文件。两种方式任选其一，均会自动验证并配置模型。',
+  'Already have the eight model files? Select their folder. No download is needed.':
+    '已有八个模型文件？选择它们所在的文件夹即可，无须再次下载。',
+  'Model setup complete. Click New Snip in the top-right corner to start.':
+    '模型已配置成功。点击右上角“新建截图”即可开始使用。',
+  'Check the folder and retry verification, repair the download, or import a complete model below.':
+    '请检查模型目录并重新验证，或使用下方“修复下载”或“导入已有模型”恢复完整模型。',
+  'Verify Model': '验证模型',
+  'Repair Download': '修复下载',
+  'Optional: download files in your browser': '可选：在浏览器中下载模型文件',
+  'Use this only if automatic download is unavailable. Skip it if the model is already ready.':
+    '仅在自动下载不可用时使用此方式。模型已就绪时，无须执行此操作。',
+  'MFR-1.5 model files': 'MFR-1.5 模型文件',
+  'Click Import Existing Model and choose the folder containing those files.':
+    '点击“导入已有模型”，选择包含这些文件的文件夹。',
+  'Model maintenance': '模型维护',
+  'Clear files in the download folder above and release the selected model. Model files in other locations are kept.':
+    '清理上方下载目录中的模型文件并解除当前模型选择。其他位置的模型文件会保留。',
   'PaddleOCR API': 'PaddleOCR API',
   'Recognition Engine': '识别引擎',
   'Active engine: {engine}.': '当前引擎：{engine}。',
   'The selected engine will activate after validation.': '所选引擎将在验证成功后启用。',
   Active: '使用中',
   'Pending validation': '等待验证',
-  'Offline formula recognition on your CPU': '使用 CPU 离线识别公式',
-  'Cloud or self-hosted recognition service': '云端或自行部署的识别服务',
+  'Fast offline formula recognition on your CPU': '在本机 CPU 上快速离线识别公式',
+  'Cloud or self-hosted service that also reads text, tables and documents':
+    '云端或自行部署的服务，还可识别文字、表格和文档',
   'Checking and applying recognition settings...': '正在检查并应用识别设置…',
   'Applying changes...': '正在应用更改…',
   'Changes will apply automatically when you finish typing.': '输入完成后将自动应用更改。',
@@ -209,10 +411,10 @@ const chinese = {
     '连接模型下载服务器超时，请检查网络或系统代理后重试。',
   'Could not reach the model download server. Check your network or system proxy and retry.':
     '无法连接模型下载服务器，请检查网络或系统代理后重试。',
-  'You can also download the eight model files from Hugging Face and use Select Local Model.':
-    '也可从 Hugging Face 手动下载八个模型文件，再点击“选择本地模型”。',
-  'MFR-1.5 model is not ready. Download it or use Select Local Model in Settings.':
-    'MFR-1.5 模型尚未就绪，请在设置中下载模型或点击“选择本地模型”。',
+  'You can also download the eight model files from Hugging Face and use Import Existing Model.':
+    '也可从 Hugging Face 下载八个模型文件，再点击“导入已有模型”。',
+  'MFR-1.5 model is not ready. Download it or use Import Existing Model in Settings.':
+    'MFR-1.5 模型尚未就绪，请在设置中下载模型或点击“导入已有模型”。',
   'Local recognition is already running. Please wait.': '本地识别正在进行，请稍候。',
   'Invalid image or image exceeds 25 MB. Please crop a smaller formula.':
     '图片无效或超过 25 MB，请截取更小的公式区域。',
@@ -255,6 +457,18 @@ const chinese = {
   'MathML, pastes as an editable equation in Microsoft Word':
     'MathML，粘贴到 Microsoft Word 中会成为可编辑公式',
   'Copied to clipboard': '已复制到剪贴板',
+  'Copied as MathML': '已复制为 MathML',
+  'Click to open OpenMathpix': '点击打开 OpenMathpix',
+  'OpenMathpix is still running': 'OpenMathpix 仍在运行',
+  'Use the snip shortcut any time. To exit, right-click the tray icon and choose Exit.':
+    '随时可以使用截图快捷键。如需退出，请右键单击托盘图标并选择“退出”。',
+  Close: '关闭',
+  'The snip hotkey {hotkey} is used by another application. Choose a different shortcut in Settings.':
+    '截图快捷键 {hotkey} 已被其他应用占用，请在设置中更换快捷键。',
+  'No key was received. If you pressed a shortcut, another application is probably using it. Try a different one.':
+    '没有收到按键。如果你按的是快捷键，它很可能已被其他应用占用，请换一个。',
+  'This shortcut is used by another application, so it does not work. Choose a different shortcut, or close that application and retry.':
+    '该快捷键已被其他应用占用，目前无法使用。请更换快捷键，或关闭占用它的应用后重试。',
   'Could not apply the copy style; copied plain LaTeX instead.':
     '无法转换为所选复制格式，已改为复制纯 LaTeX。',
   'Could not save your changes to history.': '无法将修改保存到历史记录。',
@@ -271,7 +485,7 @@ const chinese = {
     '将 OpenMathpix 切换到前台，便于查看和修改结果。',
   'Copy in the background': '后台复制',
   'Stay in your current app. The result is copied and a notification appears.':
-    '留在当前应用中，识别结果会自动复制并弹出系统通知。',
+    '留在当前应用中，识别结果会自动复制，并弹出提示。',
   'Press the new shortcut. Esc cancels.': '请按下新的快捷键，按 Esc 取消。',
   'Click to change': '点击修改',
   Output: '输出',
@@ -311,6 +525,12 @@ export function translate(
 }
 
 const engineErrors: Record<string, string> = {
+  'TexTeller 模型文件不兼容或已损坏，请重新下载模型。':
+    'The TexTeller model files are incompatible or corrupt. Please download the model again.',
+  'TexTeller 引擎已关闭，请重新启用本地识别。':
+    'The TexTeller engine has closed. Please enable local recognition again.',
+  'TexTeller 正在识别另一张截图，请稍候再试。':
+    'TexTeller is recognizing another screenshot. Please wait and retry.',
   'MFR 模型配置无效，请重新下载模型。':
     'Invalid MFR configuration. Please download the model again.',
   'MFR 图像处理配置不兼容，请重新下载官方 MFR-1.5 模型。':

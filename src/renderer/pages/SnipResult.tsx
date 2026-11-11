@@ -6,6 +6,7 @@ import { recognizeImage } from '../hooks/useOCR';
 import { copyResult } from '../copy';
 import { CopyIcon, WarningIcon } from '../components/Icons';
 import { LATEX_COPY_LABELS } from '../../shared/latex-copy';
+import { localModelInstalled } from '../settings-session';
 import type { TranslationKey } from '../../shared/i18n';
 
 const tabs: { key: 'latex' | 'markdown' | 'text' | 'image'; label: TranslationKey }[] = [
@@ -25,52 +26,63 @@ export default function SnipResult() {
     error,
     currentImage,
     settings,
-    mfrStatus,
     setCurrentPage,
+    setSettingsTab,
   } = useAppStore();
+  const engine = settings?.ocrEngine;
+  const localName = engine === 'mfr' ? 'MFR-1.5' : engine === 'texteller' ? 'TexTeller' : null;
   const copyStyle = settings?.latexCopyStyle ?? 'plain';
 
   const retry = () => {
     if (currentImage) void recognizeImage(currentImage);
   };
 
+  // Before the first result the start page needs no format tabs.
+  const hasContent = !!ocrResult || !!currentImage || isRecognizing || !!error;
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-        <div role="tablist" className="flex gap-1">
-          {tabs.map(({ key, label }) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={activeTab === key}
-              onClick={() => setActiveTab(key)}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                activeTab === key
-                  ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {t(label)}
-            </button>
-          ))}
-        </div>
+      {hasContent && (
+        <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <div role="tablist" className="flex gap-1">
+            {tabs.map(({ key, label }) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={activeTab === key}
+                onClick={() => setActiveTab(key)}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  activeTab === key
+                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-medium'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
 
-        {ocrResult && !isRecognizing && activeTab !== 'image' && (
-          <button
-            onClick={() => void copyResult(ocrResult, activeTab)}
-            title={activeTab === 'latex' ? t('Change the copy style in Settings.') : undefined}
-            className="btn-secondary"
-          >
-            <CopyIcon className="w-3.5 h-3.5" />
-            {t('Copy')}
-            {activeTab === 'latex' && copyStyle !== 'plain' && (
-              <span className="text-xs text-gray-500 font-mono">
-                {LATEX_COPY_LABELS[copyStyle]}
-              </span>
-            )}
-          </button>
-        )}
-      </div>
+          {ocrResult && !isRecognizing && activeTab !== 'image' && (
+            <button
+              onClick={() => void copyResult(ocrResult, activeTab)}
+              title={
+                activeTab === 'latex'
+                  ? `${t('Change the copy style in Settings.')} (Ctrl+Shift+C)`
+                  : 'Ctrl+Shift+C'
+              }
+              className="btn-secondary"
+            >
+              <CopyIcon className="w-3.5 h-3.5" />
+              {t('Copy')}
+              {activeTab === 'latex' && copyStyle !== 'plain' && (
+                <span className="text-xs text-gray-500 font-mono">
+                  {LATEX_COPY_LABELS[copyStyle]}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {isRecognizing && (
         <div className="flex-1 flex items-center justify-center p-6">
@@ -84,11 +96,11 @@ export default function SnipResult() {
             )}
             <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm text-gray-500">
-              {settings?.ocrEngine === 'mfr'
-                ? t('Recognizing with MFR-1.5...')
+              {localName
+                ? t('Recognizing with {model}...', { model: localName })
                 : t('Recognizing...')}
             </span>
-            {settings?.ocrEngine === 'mfr' && (
+            {localName && (
               <span className="text-xs text-gray-400">
                 {t('Processing the formula on this device.')}
               </span>
@@ -111,8 +123,14 @@ export default function SnipResult() {
                 className="max-h-20 max-w-full rounded border border-gray-200 dark:border-gray-700 bg-white p-1"
               />
             )}
-            {settings?.ocrEngine === 'mfr' && mfrStatus?.state !== 'ready' ? (
-              <button onClick={() => setCurrentPage('settings')} className="btn-primary">
+            {engine && engine !== 'paddleocr' && !localModelInstalled(engine) ? (
+              <button
+                onClick={() => {
+                  setSettingsTab('recognition');
+                  setCurrentPage('settings');
+                }}
+                className="btn-primary"
+              >
                 {t('Open Model Settings')}
               </button>
             ) : currentImage ? (

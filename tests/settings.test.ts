@@ -32,9 +32,20 @@ test('invalid settings cannot cross the IPC boundary', () => {
     { snipHotkey: ' ' },
     { encryptedToken: 'injected' },
     { accessToken: 123 },
+    { mfrDownloadDirectory: 123 },
+    { mfrDownloadDirectory: 'bad\0path' },
   ]) {
     assert.throws(() => validateSettingsUpdates(updates));
   }
+});
+
+test('custom model storage is preserved without changing the selected model directory', () => {
+  assert.deepEqual(validateSettingsUpdates({ mfrDownloadDirectory: 'D:\\Models\\公式' }), {
+    mfrDownloadDirectory: 'D:\\Models\\公式',
+  });
+  assert.deepEqual(validateSettingsUpdates({ mfrDownloadDirectory: '' }), {
+    mfrDownloadDirectory: '',
+  });
 });
 
 test('local OCR settings need no cloud credentials', () => {

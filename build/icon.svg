@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>OpenMathpix</title>
+  <defs>
+    <linearGradient id="tile" x1="60.0" y1="60.0" x2="964.0" y2="964.0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3455E7"/>
+      <stop offset="1" stop-color="#181D7A"/>
+    </linearGradient>
+  </defs>
+  <rect x="60.0" y="60.0" width="904" height="904" rx="198.9" fill="url(#tile)"/>
+  <path d="M213.1 361.3L213.1 242.6A21.3 21.3 0 0 1 234.4 221.3L365.0 221.3M815.8 653.7L815.8 772.4A21.3 21.3 0 0 1 794.5 793.7L663.9 793.7" fill="none" stroke="#5EE6EE" stroke-width="37.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M652.7 681.8A16.4 16.4 0 0 1 636.6 695.0L363.8 695.0A21.3 21.3 0 0 1 347.2 660.3L469.0 509.5L346.2 356.0A19.7 19.7 0 0 1 361.5 324.1L636.9 324.1A21.3 21.3 0 0 1 658.2 345.4L658.2 400.2A17.2 17.2 0 0 1 641.0 417.4L637.8 417.4A17.2 17.2 0 0 1 620.8 402.7L617.9 382.8A7.4 7.4 0 0 0 610.6 376.5L441.2 377.7L534.9 497.9A11.5 11.5 0 0 1 534.9 511.9L438.7 636.5L600.6 636.9A7.4 7.4 0 0 0 606.9 633.3L627.2 600.2A12.3 12.3 0 0 1 637.7 594.3L651.9 594.3A14.7 14.7 0 0 1 666.3 611.9Z" fill="#FFFFFF"/>
+</svg>

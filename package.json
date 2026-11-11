@@ -1,23 +1,25 @@
 {
   "name": "openmathpix",
-  "version": "0.1.0",
+  "version": "2026.11.11",
   "license": "AGPL-3.0-only",
-  "description": "Open-source formula snipping tool with local Pix2Text MFR and optional PaddleOCR",
+  "description": "Open-source formula snipping tool with local MFR-1.5, LaTeX-OCR and PaddleOCR engines",
   "main": "./out/main/index.js",
   "author": {
-    "name": "jhuow",
+    "name": "Wei Zhuo",
     "email": "jhuow@proton.me",
     "url": "https://wei2hu0.github.io/"
   },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package": "electron-vite build && electron-builder",
+    "package": "npm run version:check && electron-vite build && electron-builder --win nsis --x64 --publish never",
+    "icons": "node scripts/build-icons.cjs",
     "lint": "eslint .",
     "format:check": "prettier --check src tests *.json *.ts *.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run version:check && npm run typecheck && npm run lint && npm test && npm run build",
+    "version:check": "node scripts/check-release.cjs"
   },
   "dependencies": {
     "axios": "^1.7.0",
@@ -42,10 +44,15 @@
     "electron-builder": "^26.0.0",
     "electron-vite": "^4.0.0",
     "eslint": "^9.0.0",
+    "mathjax-full": "3.2.2",
     "postcss": "^8.4.0",
     "prettier": "^3.3.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.72.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JhuoW/OpenMathpix.git"
   }
 }

@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { resolve } from 'node:path';
 import { createSettingsService, type PreparedModel } from '../src/main/settings-service';
 import type { AppSettings } from '../src/shared/types';
 
 const defaults: AppSettings = {
   ocrEngine: 'mfr',
   mfrModelPath: '',
+  mfrDownloadDirectory: '',
+  mfrModelEnabled: true,
   apiUrl: 'https://example.test',
   accessToken: '',
+  textellerModelPath: '',
+  textellerDownloadDirectory: '',
+  textellerModelEnabled: true,
   pipeline: 'PP-StructureV3',
   snipHotkey: 'Control+Shift+S',
   defaultOutputFormat: 'latex',
@@ -17,8 +23,23 @@ const defaults: AppSettings = {
   afterSnip: 'window',
   latexCopyStyle: 'plain',
   cleanLatex: true,
+  launchAtLogin: true,
   modelSource: 'huggingface',
 };
+
+test('download location is saved independently of the active imported model and engine', async () => {
+  const service = setup();
+  await service.update({ mfrModelPath: '/external/model' });
+  service.events.length = 0;
+  const directory = resolve('model storage');
+  const saved = await service.update({ mfrDownloadDirectory: directory });
+  assert.equal(saved.mfrDownloadDirectory, directory);
+  assert.equal(saved.mfrModelPath, '/external/model');
+  assert.equal(saved.ocrEngine, 'mfr');
+  assert.deepEqual(service.events, ['persist', 'changed']);
+  await assert.rejects(service.update({ mfrDownloadDirectory: 'relative/path' }), /absolute/);
+  assert.equal(service.read().mfrDownloadDirectory, directory);
+});
 
 function deferred() {
   let resolve!: () => void;
@@ -29,10 +50,12 @@ function deferred() {
 function setup(overrides: Partial<Parameters<typeof createSettingsService>[0]> = {}) {
   let saved = { ...defaults };
   const events: string[] = [];
+  const verified: (string | undefined)[] = [];
   const deps: Parameters<typeof createSettingsService>[0] = {
     read: () => ({ ...saved }),
-    persist: (updates) => {
+    persist: (updates, engine) => {
       events.push('persist');
+      verified.push(engine);
       saved = { ...saved, ...updates };
     },
     prepareModel: async () => {
@@ -45,11 +68,105 @@ function setup(overrides: Partial<Parameters<typeof createSettingsService>[0]> =
     testCloud: async () => {
       events.push('test-cloud');
     },
+    prepareTextellerModel: async () => {
+      events.push('prepare-texteller');
+      return {
+        commit: () => events.push('commit-texteller'),
+        dispose: () => events.push('dispose-texteller'),
+      };
+    },
     changed: () => events.push('changed'),
     ...overrides,
   };
-  return { ...createSettingsService(deps), read: deps.read, events };
+  return { ...createSettingsService(deps), read: deps.read, events, verified };
 }
+
+test('cloud activation cannot bypass explicit Connect & Use and cannot incur an autosave request', async () => {
+  const service = setup();
+  await assert.rejects(service.update({ ocrEngine: 'paddleocr' }), /Connect & Use/);
+
+  assert.deepEqual(service.events, []);
+  assert.deepEqual(service.read(), defaults);
+});
+
+test('explicit Paddle connection validates once and persists only the verified configuration', async () => {
+  const service = setup();
+  await service.connect({ ocrEngine: 'paddleocr', accessToken: ' key ' });
+  assert.equal(service.read().accessToken, 'key');
+  assert.deepEqual(service.events, ['test-cloud', 'persist', 'changed']);
+  assert.deepEqual(service.verified, ['paddleocr']);
+  service.events.length = 0;
+  await service.update({ theme: 'dark' });
+  assert.deepEqual(service.events, ['persist', 'changed']);
+});
+
+test('TexTeller setup is independent of MFR and commits only after validation', async () => {
+  const service = setup();
+  await service.update({ mfrModelPath: '/models/working-mfr' });
+  service.events.length = 0;
+  await service.update({ ocrEngine: 'texteller', textellerModelPath: '/models/texteller' });
+  assert.equal(service.read().ocrEngine, 'texteller');
+  assert.equal(service.read().mfrModelPath, '/models/working-mfr');
+  assert.equal(service.read().textellerModelPath, '/models/texteller');
+  assert.deepEqual(service.events, [
+    'prepare-texteller',
+    'persist',
+    'commit-texteller',
+    'changed',
+    'dispose-texteller',
+  ]);
+});
+
+test('failed second local setup preserves working MFR and both directories', async () => {
+  const service = setup({
+    prepareTextellerModel: async () => {
+      throw new Error('Invalid TexTeller model');
+    },
+  });
+  const previous = service.read();
+  await assert.rejects(
+    service.update({ ocrEngine: 'texteller', textellerModelPath: '/bad' }),
+    /Invalid TexTeller/,
+  );
+  assert.deepEqual(service.read(), previous);
+});
+
+test('TexTeller can be selected before installation and only explicit setup enables a removed model', async () => {
+  let preparations = 0;
+  const service = setup({
+    prepareTextellerModel: async (directory, options) => {
+      preparations++;
+      if (!directory) assert.equal(options?.allowMissingDefault, true);
+      return { commit() {}, dispose() {} };
+    },
+  });
+  await service.update({ ocrEngine: 'texteller' });
+  assert.equal(preparations, 1);
+  await service.update({ textellerModelEnabled: false });
+  await service.update({ ocrEngine: 'mfr' });
+  await service.update({ ocrEngine: 'texteller' });
+  assert.equal(preparations, 1);
+  assert.equal(service.read().textellerModelEnabled, false);
+  await service.update({ textellerModelPath: '/valid' });
+  assert.equal(preparations, 2);
+  assert.equal(service.read().textellerModelEnabled, true);
+});
+
+test('failed model deletion persists a disabled retry target without losing the other engine', async () => {
+  const service = setup({
+    prepareClearTextellerModel: async () => ({
+      recoveryPath: '/locked/texteller',
+      commit: async () => {
+        throw new Error('File in use');
+      },
+      dispose: async () => {},
+    }),
+  });
+  await assert.rejects(service.clearModel('texteller'), /File in use/);
+  assert.equal(service.read().textellerModelPath, '/locked/texteller');
+  assert.equal(service.read().textellerModelEnabled, false);
+  assert.equal(service.read().mfrModelEnabled, true);
+});
 
 test('switching from cloud to local can save before the default model is installed', async () => {
   const prepared: string[] = [];
@@ -66,7 +183,7 @@ test('switching from cloud to local can save before the default model is install
       };
     },
   });
-  await service.update({ ocrEngine: 'paddleocr' });
+  await service.connect({ ocrEngine: 'paddleocr' });
   service.events.length = 0;
   const saved = await service.update({ ocrEngine: 'mfr' });
   assert.equal(saved.ocrEngine, 'mfr');
@@ -82,7 +199,7 @@ test('explicit default installation and custom imports remain strict while switc
       throw new Error('Missing model files');
     },
   });
-  await service.update({ ocrEngine: 'paddleocr' });
+  await service.connect({ ocrEngine: 'paddleocr' });
   const previous = service.read();
   for (const mfrModelPath of ['', '/missing/custom/model']) {
     await assert.rejects(service.update({ ocrEngine: 'mfr', mfrModelPath }), /Missing model files/);
@@ -101,7 +218,7 @@ test('a selected custom path cannot bypass validation when switching back to loc
     },
   });
   await service.update({ mfrModelPath: '/custom/model' });
-  await service.update({ ocrEngine: 'paddleocr' });
+  await service.connect({ ocrEngine: 'paddleocr' });
   const previous = service.read();
   broken = true;
   await assert.rejects(service.update({ ocrEngine: 'mfr' }), /became unreadable/);
@@ -119,7 +236,7 @@ test('switching to an installed local model waits for validation before persisti
       return { commit() {}, dispose() {} };
     },
   });
-  await service.update({ ocrEngine: 'paddleocr' });
+  await service.connect({ ocrEngine: 'paddleocr' });
   const local = service.update({ ocrEngine: 'mfr' });
   await entered.promise;
   assert.equal(service.read().ocrEngine, 'paddleocr');
@@ -135,7 +252,7 @@ test('corrupt default models still fail an engine switch and preserve cloud sett
       throw new Error('Incomplete, corrupt, or incompatible model');
     },
   });
-  await service.update({ ocrEngine: 'paddleocr' });
+  await service.connect({ ocrEngine: 'paddleocr' });
   const previous = service.read();
   await assert.rejects(service.update({ ocrEngine: 'mfr' }), /corrupt/);
   assert.deepEqual(service.read(), previous);
@@ -187,7 +304,7 @@ test('a failed API validation does not overwrite working credentials or switch e
     },
   });
   await assert.rejects(
-    service.update({ ocrEngine: 'paddleocr', apiUrl: 'https://bad.test', accessToken: 'bad' }),
+    service.connect({ ocrEngine: 'paddleocr', apiUrl: 'https://bad.test', accessToken: 'bad' }),
     /Authentication/,
   );
   assert.deepEqual(service.read(), defaults);
@@ -201,7 +318,7 @@ test('a failed API validation does not overwrite working credentials or switch e
 
 test('switching to an unconfigured API fails before attempting a network request', async () => {
   const service = setup();
-  await assert.rejects(service.update({ ocrEngine: 'paddleocr', apiUrl: '' }), /Enter an API URL/);
+  await assert.rejects(service.connect({ ocrEngine: 'paddleocr', apiUrl: '' }), /Enter an API URL/);
   assert.deepEqual(service.events, []);
 });
 
@@ -214,7 +331,7 @@ test('slow API validation does not block preferences or overwrite their newer va
       await finish.promise;
     },
   });
-  const cloud = service.update({ ocrEngine: 'paddleocr' });
+  const cloud = service.connect({ ocrEngine: 'paddleocr' });
   await entered.promise;
   const dark = await service.update({ theme: 'dark', historyLimit: 30 });
   assert.equal(dark.theme, 'dark');
@@ -299,6 +416,7 @@ test('clearing the model resets its path without initializing a missing model', 
   service.events.length = 0;
   await service.clearModel();
   assert.equal(service.read().mfrModelPath, '');
+  assert.equal(service.read().mfrModelEnabled, false);
   assert.equal(service.read().ocrEngine, 'mfr');
   assert.deepEqual(service.events, ['persist', 'changed']);
   assert.deepEqual(events, ['clear', 'dispose']);
@@ -337,6 +455,7 @@ test('a cleanup failure cannot reactivate a partially deleted model and broadcas
   service.events.length = 0;
   await assert.rejects(service.clearModel(), /remaining cache/);
   assert.equal(service.read().mfrModelPath, '');
+  assert.equal(service.read().mfrModelEnabled, false);
   assert.deepEqual(service.events, ['persist', 'changed']);
   await service.update({ theme: 'dark' });
   assert.equal(service.read().theme, 'dark');

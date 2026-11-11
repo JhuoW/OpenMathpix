@@ -1,39 +1,52 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store';
+import type { MfrStatus } from '../../shared/types';
 
-/** Subscribe once at the app level so downloads remain visible across pages. */
+/** Subscribe once for both independent local models, including background downloads. */
 export function useMfrStatus() {
   const setMfrStatus = useAppStore((state) => state.setMfrStatus);
-
+  const setTextellerStatus = useAppStore((state) => state.setTextellerStatus);
   useEffect(() => {
-    let active = true;
-    let receivedUpdate = false;
-    const unsubscribe = window.api.onMfrStatus((status) => {
-      if (!active) return;
-      receivedUpdate = true;
-      setMfrStatus(status);
-    });
-
-    window.api
-      .getMfrStatus()
-      .then((status) => {
-        // A delayed initial response must not replace a newer download event.
-        if (active && !receivedUpdate) setMfrStatus(status);
-      })
-      .catch((error: unknown) => {
-        if (active && !receivedUpdate) {
-          setMfrStatus({
-            state: 'error',
-            downloadedBytes: 0,
-            totalBytes: 0,
-            error: error instanceof Error ? error.message : 'Could not check the local model.',
-          });
-        }
+    const subscribe = (
+      listen: (cb: (status: MfrStatus) => void) => () => void,
+      read: () => Promise<MfrStatus>,
+      setStatus: (status: MfrStatus) => void,
+    ) => {
+      let active = true;
+      let receivedUpdate = false;
+      const unsubscribe = listen((status) => {
+        if (!active) return;
+        receivedUpdate = true;
+        setStatus(status);
       });
-
-    return () => {
-      active = false;
-      unsubscribe();
+      void read().then(
+        (status) => {
+          if (active && !receivedUpdate) setStatus(status);
+        },
+        (error: unknown) => {
+          if (active && !receivedUpdate)
+            setStatus({
+              state: 'error',
+              downloadedBytes: 0,
+              totalBytes: 0,
+              error: error instanceof Error ? error.message : 'Could not check the local model.',
+            });
+        },
+      );
+      return () => {
+        active = false;
+        unsubscribe();
+      };
     };
-  }, [setMfrStatus]);
+    const stopMfr = subscribe(window.api.onMfrStatus, window.api.getMfrStatus, setMfrStatus);
+    const stopTexteller = subscribe(
+      window.api.onTextellerStatus,
+      window.api.getTextellerStatus,
+      setTextellerStatus,
+    );
+    return () => {
+      stopMfr();
+      stopTexteller();
+    };
+  }, [setMfrStatus, setTextellerStatus]);
 }

@@ -1,8 +1,16 @@
 import { create } from 'zustand';
-import type { AppSettings, MfrStatus, OCRResult, OutputFormat } from '../shared/types';
+import type {
+  AppSettings,
+  EngineStatuses,
+  HotkeyStatus,
+  MfrStatus,
+  OCRResult,
+  OutputFormat,
+} from '../shared/types';
 import { applyEdit, createHistorySaver, historyChanges } from './result-edit';
 
 type Page = 'result' | 'settings' | 'history';
+export type SettingsTab = 'recognition' | 'snipping' | 'output' | 'general';
 type Tab = OutputFormat | 'image';
 
 interface AppState {
@@ -18,10 +26,17 @@ interface AppState {
   activeTab: Tab;
   currentPage: Page;
   toast: string | null;
+  /** Remembered while the app runs, so returning to Settings shows the same section. */
+  settingsTab: SettingsTab;
+  /** The first-run guide stays on screen until the user finishes its last step. */
+  guideActive: boolean;
 
   // Settings (cached)
   settings: AppSettings | null;
   mfrStatus: MfrStatus | null;
+  textellerStatus: MfrStatus | null;
+  engineStatuses: EngineStatuses | null;
+  hotkeyStatus: HotkeyStatus | null;
 
   // Actions
   setCurrentImage: (img: string | null) => void;
@@ -30,13 +45,20 @@ interface AppState {
   openResult: (result: OCRResult, image: string | null, tab: Tab) => void;
   editResult: (format: OutputFormat, value: string) => void;
   resetEdits: () => void;
+  /** Called only after the history deletion succeeded on disk. */
+  forgetHistory: (id?: number) => void;
   setIsRecognizing: (v: boolean) => void;
   setError: (err: string | null) => void;
   setActiveTab: (tab: Tab) => void;
   setCurrentPage: (page: Page) => void;
+  setSettingsTab: (tab: SettingsTab) => void;
+  setGuideActive: (active: boolean) => void;
   setSettings: (s: AppSettings) => void;
   setMfrStatus: (status: MfrStatus) => void;
-  showToast: (msg: string) => void;
+  setTextellerStatus: (status: MfrStatus) => void;
+  setEngineStatuses: (statuses: EngineStatuses) => void;
+  setHotkeyStatus: (status: HotkeyStatus) => void;
+  showToast: (msg: string, durationMs?: number) => void;
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -61,8 +83,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeTab: 'latex',
   currentPage: 'result',
   toast: null,
+  settingsTab: 'recognition',
+  guideActive: false,
   settings: null,
   mfrStatus: null,
+  textellerStatus: null,
+  engineStatuses: null,
+  hotkeyStatus: null,
 
   setCurrentImage: (currentImage) => set({ currentImage }),
   setOcrResult: (ocrResult) => set({ ocrResult, baseline: ocrResult }),
@@ -90,16 +117,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ ocrResult: baseline });
     persistChange(ocrResult, baseline);
   },
+  forgetHistory: (id) => {
+    historySaver.forget(id);
+    const currentId = get().ocrResult?.historyId;
+    if (currentId !== undefined && (id === undefined || currentId === id)) {
+      historySaver.forget(currentId);
+      set({ ocrResult: null, baseline: null, currentImage: null, error: null });
+    }
+  },
   setIsRecognizing: (isRecognizing) => set({ isRecognizing }),
   setError: (error) => set({ error }),
   setActiveTab: (activeTab) => set({ activeTab }),
   setCurrentPage: (currentPage) => set({ currentPage }),
+  setSettingsTab: (settingsTab) => set({ settingsTab }),
+  setGuideActive: (guideActive) => set({ guideActive }),
   setSettings: (settings) => set({ settings }),
   setMfrStatus: (mfrStatus) => set({ mfrStatus }),
-  showToast: (msg) => {
+  setTextellerStatus: (textellerStatus) => set({ textellerStatus }),
+  setEngineStatuses: (engineStatuses) => set({ engineStatuses }),
+  setHotkeyStatus: (hotkeyStatus) => set({ hotkeyStatus }),
+  showToast: (msg, durationMs = 2500) => {
     clearTimeout(toastTimer);
     set({ toast: msg });
-    toastTimer = setTimeout(() => set({ toast: null }), 2500);
+    toastTimer = setTimeout(() => set({ toast: null }), durationMs);
   },
 }));
 

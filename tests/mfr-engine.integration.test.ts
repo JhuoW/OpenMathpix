@@ -36,3 +36,20 @@ test(
     }
   },
 );
+
+test(
+  'real MFR inference rejects a code screenshot quickly instead of decoding until timeout',
+  { skip: !process.env.OPENMATHPIX_MFR_MODEL_DIR },
+  async () => {
+    const engine = await createMfrEngine(process.env.OPENMATHPIX_MFR_MODEL_DIR ?? '');
+    const code = await readFile(join(process.cwd(), 'tests/fixtures/mfr/code-snippet.png'));
+    try {
+      const started = Date.now();
+      await assert.rejects(engine.recognize(code), /没有可辨认的公式/);
+      // Without the guard this decodes hundreds of tokens for 40-80 seconds.
+      assert.ok(Date.now() - started < 15_000, `took ${Date.now() - started} ms`);
+    } finally {
+      await engine.dispose();
+    }
+  },
+);

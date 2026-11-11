@@ -4,6 +4,7 @@ import { useI18n } from '../hooks/useI18n';
 import { acceleratorKeys, isMacPlatform } from '../hotkey';
 import type { TranslationKey } from '../../shared/i18n';
 import { HistoryIcon, SettingsIcon, SnipIcon } from './Icons';
+import Logo from './Logo';
 
 const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
@@ -29,7 +30,11 @@ export default function Toolbar() {
       className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 select-none"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <span className="font-semibold text-sm mr-2 pl-1" style={noDrag}>
+      <span
+        className="inline-flex items-center gap-2 font-semibold text-sm mr-2 pl-1"
+        style={noDrag}
+      >
+        <Logo size={20} />
         OpenMathpix
       </span>
 

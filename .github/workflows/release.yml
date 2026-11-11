@@ -1,0 +1,44 @@
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Reject mismatched tags/lockfiles before producing or uploading any artifacts.
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm run package
+      - run: node scripts/prepare-release.cjs
+      - name: Save installer for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMathpix-Windows-installer
+          path: |
+            dist/OpenMathpix-Setup-*.exe
+            dist/OpenMathpix-Setup-*.exe.sha256
+          if-no-files-found: error
+      - name: Create draft GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          $installer = "dist/OpenMathpix-Setup-$version-x64.exe"
+          gh release create $env:RELEASE_TAG $installer "$installer.sha256" --verify-tag --draft --title "OpenMathpix $version" --generate-notes

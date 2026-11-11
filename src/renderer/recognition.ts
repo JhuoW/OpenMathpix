@@ -19,8 +19,22 @@ interface RecognitionDependencies {
   showToast: (message: string) => void;
   /** Clipboard text for a format; may apply a LaTeX copy style such as MathML. */
   copyFor?: (result: OCRResult, format: OutputFormat) => string;
-  /** Report the outcome outside the window, e.g. as a system notification. */
-  notify?: (outcome: { copied: string } | { error: string }) => void;
+  /**
+   * Report the outcome outside the window, e.g. as a system notification. `source` is the
+   * tab's text before a copy style such as MathML was applied.
+   */
+  notify?: (outcome: CopiedOutcome | { error: string }) => void;
+}
+
+export interface CopiedOutcome {
+  copied: string;
+  source: string;
+}
+
+/** MathML markup is unreadable in a notification; show the formula it encodes instead. */
+export function describeCopy(outcome: CopiedOutcome): { mathml: boolean; body: string } {
+  const mathml = /^\s*<math\b/.test(outcome.copied);
+  return { mathml, body: mathml ? outcome.source : outcome.copied };
 }
 
 const stripRemotePrefix = (message: string) =>
@@ -67,7 +81,7 @@ export function createRecognizer(deps: RecognitionDependencies) {
       }
       if (result.warning) notifications.push(result.warning);
       if (notifications.length) deps.showToast(notifications.join(' '));
-      if (copied) deps.notify?.({ copied });
+      if (copied) deps.notify?.({ copied, source: result[format] });
     } catch (error) {
       const message = stripRemotePrefix(
         error instanceof Error ? error.message : 'Recognition failed',

@@ -40,6 +40,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           'mfr-worker': resolve(__dirname, 'src/main/mfr-worker.ts'),
+          'uninstall-data': resolve(__dirname, 'src/main/uninstall-data.ts'),
         },
       },
     },
@@ -57,6 +58,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           overlay: resolve(__dirname, 'src/renderer/overlay.html'),
+          popup: resolve(__dirname, 'src/renderer/popup.html'),
         },
       },
     },

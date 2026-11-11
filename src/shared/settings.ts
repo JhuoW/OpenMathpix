@@ -10,14 +10,18 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
   for (const [key, value] of Object.entries(input)) {
     switch (key) {
       case 'ocrEngine':
-        if (value !== 'mfr' && value !== 'paddleocr') throw new Error('Unsupported OCR engine.');
+        if (value !== 'mfr' && value !== 'paddleocr' && value !== 'texteller')
+          throw new Error('Unsupported OCR engine.');
         updates.ocrEngine = value;
         break;
       case 'mfrModelPath':
+      case 'mfrDownloadDirectory':
+      case 'textellerModelPath':
+      case 'textellerDownloadDirectory':
         if (typeof value !== 'string' || value.includes('\0')) {
           throw new Error('Local model directory must be a valid path.');
         }
-        updates.mfrModelPath = value;
+        updates[key] = value;
         break;
       case 'apiUrl': {
         if (typeof value !== 'string') throw new Error('API URL must be text.');
@@ -87,6 +91,15 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
       case 'cleanLatex':
         if (typeof value !== 'boolean') throw new Error('LaTeX cleanup must be on or off.');
         updates.cleanLatex = value;
+        break;
+      case 'launchAtLogin':
+        if (typeof value !== 'boolean') throw new Error('Start at sign-in must be on or off.');
+        updates.launchAtLogin = value;
+        break;
+      case 'mfrModelEnabled':
+      case 'textellerModelEnabled':
+        if (typeof value !== 'boolean') throw new Error('Invalid local model state.');
+        updates[key] = value;
         break;
       case 'modelSource':
         if (value !== 'huggingface' && value !== 'hf-mirror') {

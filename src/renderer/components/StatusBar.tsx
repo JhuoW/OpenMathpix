@@ -1,36 +1,52 @@
 import React from 'react';
 import { useAppStore } from '../store';
 import { useI18n } from '../hooks/useI18n';
+import { engineIsActive } from '../engine-status';
 
 export default function StatusBar() {
   const { t, message } = useI18n();
-  const { isRecognizing, settings, error, mfrStatus } = useAppStore();
+  const {
+    isRecognizing,
+    settings,
+    error,
+    mfrStatus: mfr,
+    textellerStatus,
+    engineStatuses,
+  } = useAppStore();
 
   const pipeline = settings?.pipeline ?? '---';
-  const local = settings?.ocrEngine === 'mfr';
-  const ready = local ? mfrStatus?.state === 'ready' : !!settings?.apiUrl;
+  const engine = settings?.ocrEngine ?? 'mfr';
+  const local = engine !== 'paddleocr';
+  const mfrStatus = engine === 'texteller' ? textellerStatus : mfr;
+  const ready = engineIsActive(engine, settings, engineStatuses, mfr, textellerStatus);
   const checking =
-    local &&
-    (!mfrStatus || ['downloading', 'validating', 'loading', 'clearing'].includes(mfrStatus.state));
+    engineStatuses?.[engine].state === 'checking' ||
+    (local &&
+      (!mfrStatus ||
+        ['downloading', 'validating', 'loading', 'clearing'].includes(mfrStatus.state)));
   const status = local
-    ? !mfrStatus
-      ? t('Checking model...')
-      : mfrStatus.state === 'ready'
-        ? t('Model ready')
+    ? ready
+      ? t('Model ready')
+      : !mfrStatus
+        ? t('Checking model...')
         : mfrStatus.state === 'downloading'
           ? t('Downloading model...')
           : mfrStatus.state === 'validating'
             ? t('Verifying model...')
-            : mfrStatus.state === 'loading'
-              ? t('Loading model...')
-              : mfrStatus.state === 'clearing'
-                ? t('Clearing model cache...')
+            : mfrStatus.state === 'clearing'
+              ? t('Removing model...')
+              : mfrStatus.state === 'loading' || checking
+                ? t('Loading model...')
                 : mfrStatus.state === 'error'
                   ? t('Model unavailable')
-                  : t('Model download required')
+                  : t('Inactive')
     : ready
       ? t('Configured')
-      : t('Not configured');
+      : checking
+        ? t('Testing connection...')
+        : engineStatuses?.[engine].state === 'error'
+          ? t('Connection unavailable')
+          : t('Inactive');
 
   return (
     <footer className="flex items-center justify-between px-4 py-1 text-xs border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
@@ -38,19 +54,31 @@ export default function StatusBar() {
         <span className="flex items-center gap-1">
           <span
             className={`inline-block w-2 h-2 rounded-full ${
-              ready ? 'bg-green-500' : checking ? 'bg-yellow-500' : 'bg-red-500'
+              ready ? 'bg-green-500' : checking ? 'bg-yellow-500' : 'bg-gray-400'
             }`}
           />
           {status}
         </span>
-        <span>{local ? t('Local MFR-1.5') : t('Pipeline: {pipeline}', { pipeline })}</span>
+        <span>
+          {local
+            ? t(engine === 'mfr' ? 'Local MFR-1.5' : 'Local TexTeller')
+            : t('Pipeline: {pipeline}', { pipeline })}
+        </span>
       </div>
 
       <div>
         {isRecognizing && <span className="animate-pulse">{t('Recognizing...')}</span>}
         {error && <span className="text-red-500">{message(error)}</span>}
         {!isRecognizing && !error && (
-          <span>{checking ? t('Preparing model...') : ready ? t('Ready') : t('Setup needed')}</span>
+          <span>
+            {checking
+              ? local
+                ? t('Preparing model...')
+                : t('Testing connection...')
+              : ready
+                ? t('Ready')
+                : t('Setup needed')}
+          </span>
         )}
       </div>
     </footer>

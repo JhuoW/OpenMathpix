@@ -10,7 +10,10 @@ import type { MfrStatus, ModelSource } from '../shared/types';
 export const MFR_REVISION = '1cef9f0bdcd6a4c63df7de1311fb0894593340cc';
 export const MFR_DOWNLOAD_PAGE = `https://huggingface.co/breezedeus/pix2text-mfr-1.5/tree/${MFR_REVISION}`;
 export interface ModelFile {
+  /** Local file name; every model is installed as a flat folder. */
   name: string;
+  /** Path inside the remote repository when it differs from the local name. */
+  remotePath?: string;
   size: number;
   sha256: string;
 }
@@ -57,7 +60,23 @@ export const MFR_FILES: readonly ModelFile[] = [
   },
 ];
 
-export type FetchModel = (file: ModelFile, signal: AbortSignal) => Promise<Readable>;
+/** A download fails only after this long without receiving any data. */
+export const DOWNLOAD_STALL_MS = 90_000;
+
+/** Thrown when the user cancels a download; partial files are kept so it can resume. */
+export const DOWNLOAD_CANCELLED = 'Model download cancelled.';
+
+/** A response body and the byte offset it starts at (0 when a range was not honoured). */
+export interface FetchedModel {
+  body: Readable;
+  start: number;
+}
+/** `start` asks for the rest of a partially downloaded file (an HTTP range request). */
+export type FetchModel = (
+  file: ModelFile,
+  signal: AbortSignal,
+  start?: number,
+) => Promise<Readable | FetchedModel>;
 /** Every file is pinned by size and SHA-256, so a mirror cannot alter what is installed. */
 export const MODEL_HOSTS: Record<ModelSource, string> = {
   huggingface: 'https://huggingface.co',
@@ -65,15 +84,25 @@ export const MODEL_HOSTS: Record<ModelSource, string> = {
 };
 export const mfrFileUrl = (file: ModelFile, source: ModelSource = 'huggingface'): string =>
   `${MODEL_HOSTS[source]}/breezedeus/pix2text-mfr-1.5/resolve/${MFR_REVISION}/${file.name}?download=true`;
-const fetchModel: FetchModel = async (file, signal) => {
+const fetchModel: FetchModel = async (file, signal, start = 0) => {
   const response = await axios.get<Readable>(mfrFileUrl(file), {
     responseType: 'stream',
     timeout: 60_000,
     signal,
     maxRedirects: 5,
+    headers: start > 0 ? { Range: `bytes=${start}-` } : undefined,
   });
-  return response.data;
+  return { body: response.data, start: response.status === 206 ? start : 0 };
 };
+
+async function partialSize(path: string, file: ModelFile): Promise<number> {
+  try {
+    const info = await stat(path);
+    return info.isFile() && info.size < file.size ? info.size : 0;
+  } catch {
+    return 0;
+  }
+}
 
 async function validFile(path: string, file: ModelFile): Promise<boolean> {
   try {
@@ -91,11 +120,12 @@ async function validFile(path: string, file: ModelFile): Promise<boolean> {
 export async function validateMfrDirectory(
   directory: string,
   files: readonly ModelFile[] = MFR_FILES,
+  modelName = 'MFR-1.5',
 ): Promise<void> {
   try {
     if (!(await stat(directory)).isDirectory()) throw new Error('Not a directory');
   } catch {
-    throw new Error('Select an accessible folder containing the MFR-1.5 model files.');
+    throw new Error(`Select an accessible folder containing the ${modelName} model files.`);
   }
   const missing: string[] = [];
   const invalid: string[] = [];
@@ -114,7 +144,9 @@ export async function validateMfrDirectory(
       [
         missing.length ? `Missing or unreadable files: ${missing.join(', ')}.` : '',
         invalid.length ? `Incomplete, corrupt, or incompatible files: ${invalid.join(', ')}.` : '',
-        'Download all eight original files from the linked MFR-1.5 revision, then select the folder containing them.',
+        modelName === 'MFR-1.5'
+          ? 'Download all eight original files from the linked MFR-1.5 revision, then select the folder containing them.'
+          : 'Download all six original files from the linked TexTeller revision into one folder (without the onnx subfolder), then select that folder.',
       ]
         .filter(Boolean)
         .join(' '),
@@ -122,10 +154,11 @@ export async function validateMfrDirectory(
   }
 }
 
-export function mfrDownloadError(error: unknown, aborted = false): string {
+export function mfrDownloadError(error: unknown, aborted = false, downloadGuide?: string): string {
   const detail = error instanceof Error ? error.message : 'Model download failed.';
   const guide =
-    'You can also download the eight model files from Hugging Face and use Select Local Model.';
+    downloadGuide ??
+    'You can also download the eight model files from Hugging Face and use Import Existing Model.';
   if (aborted) return `Model download cancelled or timed out. Please retry. ${guide}`;
   if (/ETIMEDOUT|ETIMEOUT|timed? ?out|timeout|ERR_CONNECTION_TIMED_OUT/i.test(detail)) {
     return `Could not connect to the model download server in time. Check your network or system proxy and retry. ${guide}`;
@@ -144,6 +177,7 @@ export class MfrModelManager {
   private initialization?: Promise<void>;
   private downloadTask?: Promise<void>;
   private abort?: AbortController;
+  private cancelled = false;
   private lastProgress = 0;
 
   constructor(
@@ -151,6 +185,7 @@ export class MfrModelManager {
     private readonly onStatus: (status: MfrStatus) => void = () => {},
     private readonly files: readonly ModelFile[] = MFR_FILES,
     private readonly fetchFile: FetchModel = fetchModel,
+    private readonly details: { label?: string; downloadGuide?: string } = {},
   ) {
     this.status = {
       state: 'not-downloaded',
@@ -167,14 +202,18 @@ export class MfrModelManager {
   private initialize(): Promise<void> {
     this.initialization ??= (async () => {
       let bytes = 0;
+      let partial = 0;
       for (const file of this.files) {
-        if (await validFile(join(this.directory, file.name), file)) bytes += file.size;
+        const path = join(this.directory, file.name);
+        if (await validFile(path, file)) bytes += file.size;
+        else partial += await partialSize(`${path}.part`, file);
       }
       const ready = bytes === this.status.totalBytes;
       this.emit({
         ...this.status,
         state: ready ? 'ready' : 'not-downloaded',
-        downloadedBytes: bytes,
+        // An interrupted download counts what it already has, so it can be resumed.
+        downloadedBytes: ready ? bytes : bytes + partial,
         modelPath: ready ? this.directory : undefined,
       });
     })();
@@ -189,7 +228,7 @@ export class MfrModelManager {
   async ensureReady(): Promise<string> {
     if ((await this.getStatus()).state !== 'ready') {
       throw new Error(
-        'MFR-1.5 model is not ready. Download it or use Select Local Model in Settings.',
+        `${this.details.label ?? 'MFR-1.5'} model is not ready. Download it or use Import Existing Model in Settings.`,
       );
     }
     return this.directory;
@@ -200,6 +239,7 @@ export class MfrModelManager {
     // Register cancellation before the first asynchronous initialization step.
     const controller = new AbortController();
     this.abort = controller;
+    this.cancelled = false;
     this.downloadTask = this.downloadFiles(controller).finally(() => {
       this.downloadTask = undefined;
       this.abort = undefined;
@@ -207,13 +247,23 @@ export class MfrModelManager {
     return this.downloadTask;
   }
 
+  /** Stop a download at the user's request; what was received stays for a later resume. */
   cancel(): void {
-    this.abort?.abort();
+    if (!this.abort) return;
+    this.cancelled = true;
+    this.abort.abort();
   }
 
   private async downloadFiles(controller: AbortController): Promise<void> {
     const signal = controller.signal;
-    const timer = setTimeout(() => controller.abort(), 10 * 60_000);
+    // Abort a stalled transfer rather than limiting total time: models range from about
+    // 120 MB to 320 MB, and slow connections must still be able to finish.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const keepAlive = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => controller.abort(), DOWNLOAD_STALL_MS);
+    };
+    keepAlive();
     let completed = 0;
     try {
       await this.initialize();
@@ -237,14 +287,36 @@ export class MfrModelManager {
           continue;
         }
         const temporary = `${target}.part`;
+        // Continue an interrupted download: hash what is on disk, then ask for the rest.
+        // The final SHA-256 covers every byte, so a stale or foreign partial file is caught.
+        const resumeFrom = await partialSize(temporary, file);
+        let hash = createHash('sha256');
         let received = 0;
-        const hash = createHash('sha256');
+        if (resumeFrom > 0) {
+          for await (const chunk of createReadStream(temporary, { end: resumeFrom - 1 })) {
+            hash.update(chunk);
+            received += chunk.length;
+          }
+        }
+        let corrupt = false;
         try {
-          const source = await this.fetchFile(file, signal);
+          keepAlive();
+          const fetched = await this.fetchFile(file, signal, received);
+          const { body, start } =
+            fetched instanceof Readable ? { body: fetched, start: 0 } : fetched;
+          if (start !== received) {
+            // The server sent the whole file instead of the requested range.
+            hash = createHash('sha256');
+            received = 0;
+          }
           const progress = new Transform({
             transform: (chunk: Buffer, _encoding, callback) => {
+              keepAlive();
               received += chunk.length;
-              if (received > file.size) return callback(new Error(`Unexpected size: ${file.name}`));
+              if (received > file.size) {
+                corrupt = true;
+                return callback(new Error(`Unexpected size: ${file.name}`));
+              }
               hash.update(chunk);
               if (Date.now() - this.lastProgress > 150) {
                 this.lastProgress = Date.now();
@@ -253,16 +325,24 @@ export class MfrModelManager {
               callback(null, chunk);
             },
           });
-          await pipeline(source, progress, createWriteStream(temporary), { signal });
+          await pipeline(
+            body,
+            progress,
+            createWriteStream(temporary, { flags: received > 0 ? 'r+' : 'w', start: received }),
+            { signal },
+          );
           if (received !== file.size || hash.digest('hex') !== file.sha256) {
+            corrupt = true;
             throw new Error(
               `Model integrity check failed: ${file.name}. Please retry the download.`,
             );
           }
           signal.throwIfAborted();
           await rename(temporary, target);
-        } finally {
-          await rm(temporary, { force: true });
+        } catch (error) {
+          // Keep an interrupted file for the next attempt; never keep a wrong one.
+          if (corrupt) await rm(temporary, { force: true });
+          throw error;
         }
         completed += file.size;
         this.emit({ ...this.status, downloadedBytes: completed });
@@ -270,7 +350,24 @@ export class MfrModelManager {
       signal.throwIfAborted();
       this.emit({ ...this.status, state: 'ready', modelPath: this.directory });
     } catch (error) {
-      const message = mfrDownloadError(error, signal.aborted);
+      if (this.cancelled) {
+        let kept = 0;
+        for (const file of this.files) {
+          const path = join(this.directory, file.name);
+          kept += (await validFile(path, file))
+            ? file.size
+            : await partialSize(`${path}.part`, file);
+        }
+        this.emit({
+          ...this.status,
+          state: 'not-downloaded',
+          downloadedBytes: kept,
+          error: undefined,
+          modelPath: undefined,
+        });
+        throw new Error(DOWNLOAD_CANCELLED);
+      }
+      const message = mfrDownloadError(error, signal.aborted, this.details.downloadGuide);
       this.emit({
         ...this.status,
         state: 'error',

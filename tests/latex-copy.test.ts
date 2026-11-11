@@ -42,3 +42,18 @@ test('MathML for Word contains presentation markup without the TeX annotation', 
   assert.match(mathml, /<\/math>$/);
   assert.throws(() => latexToMathML('\\frac{1}{'));
 });
+
+test('several formulas copy as one MathML element, which Word pastes as one equation', () => {
+  const single = formatLatexForCopy('x', 'mathml', latexToMathML);
+  assert.equal(single, latexToMathML('x'));
+
+  // Word pastes two adjacent <math> elements as literal XML text.
+  const mathml = formatLatexForCopy('$$x=1$$\n\n$$\\frac{1}{2}$$', 'mathml', latexToMathML);
+  assert.equal(mathml.match(/<math\b/g)?.length, 1);
+  assert.equal(mathml.match(/<\/math>/g)?.length, 1);
+  assert.match(mathml, /^<math xmlns="http:\/\/www\.w3\.org\/1998\/Math\/MathML"/);
+  assert.equal(mathml.match(/<mtr><mtd>/g)?.length, 2);
+  assert.match(mathml, /<mi>x<\/mi><mo>=<\/mo><mn>1<\/mn>/);
+  assert.match(mathml, /<mfrac>/);
+  assert.doesNotMatch(mathml, /\n/);
+});

@@ -35,11 +35,15 @@ export function createByteLevelTokenizer(value: unknown): ByteLevelTokenizer {
     throw new Error('MFR 需要 ByteLevel BPE tokenizer，请重新下载官方 MFR-1.5 模型。');
   }
   const specialIds = new Set<number>();
+  // Added tokens outside the BPE vocabulary (TexTeller's CJK characters) decode as plain text.
+  const addedText = new Map<number, Buffer>();
   if (Array.isArray(tokenizer.added_tokens)) {
     for (const token of tokenizer.added_tokens) {
       const added = object(token);
-      if (added.special === true && Number.isInteger(added.id)) {
-        specialIds.add(added.id as number);
+      if (!Number.isInteger(added.id)) continue;
+      if (added.special === true) specialIds.add(added.id as number);
+      else if (typeof added.content === 'string') {
+        addedText.set(added.id as number, Buffer.from(added.content, 'utf8'));
       }
     }
   }
@@ -61,6 +65,7 @@ export function createByteLevelTokenizer(value: unknown): ByteLevelTokenizer {
     }
     tokens.set(value, Buffer.from(bytes));
   }
+  for (const [id, text] of addedText) if (!tokens.has(id)) tokens.set(id, text);
   if (tokens.size === 0) throw new Error('MFR tokenizer 词表为空，请重新下载模型。');
   return {
     vocabularySize: tokens.size,

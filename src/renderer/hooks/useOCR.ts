@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store';
-import { createRecognizer } from '../recognition';
+import { createRecognizer, describeCopy } from '../recognition';
 import { clipboardText } from '../copy';
 import { localizeError, translate } from '../../shared/i18n';
 
@@ -14,11 +14,19 @@ export const recognizeImage = createRecognizer({
   // The main process shows a notification only when the window is hidden or unfocused.
   notify: (outcome) => {
     const language = useAppStore.getState().settings?.language ?? 'en';
-    const [title, body] =
-      'copied' in outcome
-        ? [translate(language, 'Copied to clipboard'), outcome.copied]
-        : [translate(language, 'Recognition failed'), localizeError(language, outcome.error)];
-    void window.api.notify(title, body).catch(() => undefined);
+    let title: string;
+    let body: string;
+    if ('copied' in outcome) {
+      const copy = describeCopy(outcome);
+      title = translate(language, copy.mathml ? 'Copied as MathML' : 'Copied to clipboard');
+      body = copy.body;
+    } else {
+      title = translate(language, 'Recognition failed');
+      body = localizeError(language, outcome.error);
+    }
+    void window.api
+      .notify(title, body, 'copied' in outcome ? 'success' : 'error')
+      .catch(() => undefined);
   },
 });
 
