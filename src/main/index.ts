@@ -11,7 +11,8 @@ import {
 } from 'electron';
 import os from 'os';
 import path from 'path';
-import { getSettings, setSettings, takeFirstTrayHint } from './store';
+import { applyInstallerLanguage, getSettings, setSettings, takeFirstTrayHint } from './store';
+import { readInstallerLanguage } from './installer-language';
 import { issueUrl, userGuideUrl } from './release-version';
 import { translate } from '../shared/i18n';
 import { showPopup } from './popup';
@@ -302,6 +303,7 @@ app.whenReady().then(async () => {
   // `ready` still fires in a second instance that is quitting. It must not open windows,
   // a tray icon or the model, nor write to the running instance's profile.
   if (!gotLock || uninstallExit) return;
+  if (app.isPackaged) applyInstallerLanguage(readInstallerLanguage(process.resourcesPath));
   const initialSettings = getSettings();
   await adoptLegacyManagedDownloads(app.getPath('userData'), {
     downloadRoot: initialSettings.mfrDownloadDirectory || undefined,

@@ -3,6 +3,7 @@ import { safeStorage } from 'electron';
 import type { AppSettings } from '../shared/types';
 import { validateSettingsUpdates } from '../shared/settings';
 import { cloudConfigurationFingerprint, type CloudEngine } from './engine-configuration';
+import { installerLanguageUpdate, type InstallerLanguage } from './installer-language';
 
 const defaults = {
   ocrEngine: 'mfr' as const,
@@ -33,8 +34,22 @@ type StoredSettings = Omit<AppSettings, 'accessToken'> & {
   verifiedCloudConfigurations: Partial<Record<CloudEngine, string>>;
   localMfrDefaultApplied?: boolean;
   trayHintShown?: boolean;
+  installerLanguageApplied?: string;
 };
 const store = new Store<StoredSettings>({ defaults });
+
+/** Start in the language chosen in Setup, once per installation. */
+export function applyInstallerLanguage(choice: InstallerLanguage | undefined): boolean {
+  const update = installerLanguageUpdate(choice, store.get('installerLanguageApplied'));
+  if (!update) return false;
+  try {
+    store.set(update);
+  } catch {
+    // A read-only profile keeps its current language rather than failing to start.
+    return false;
+  }
+  return true;
+}
 
 /**
  * Whether the user has been told once that closing the window keeps OpenMathpix running

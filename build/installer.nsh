@@ -1,5 +1,6 @@
 ; Included automatically by electron-builder's NSIS target.
 
+!include LogicLib.nsh
 !include nsDialogs.nsh
 !include FileFunc.nsh
 !include WordFunc.nsh
@@ -21,6 +22,52 @@
 
 !ifndef OPENMATHPIX_DATA_PROFILE
   !define OPENMATHPIX_DATA_PROFILE "$APPDATA\${APP_PACKAGE_NAME}"
+!endif
+
+!ifndef BUILD_UNINSTALLER
+  Var appLanguage
+
+  ; Sets $appLanguage to the language OpenMathpix already uses (2052 or 1033), read from the
+  ; signed-in user's settings, or to "" when it has never run. electron-store writes one
+  ; `"key": value` per line. Leaves the current-user shell context: the caller restores it
+  ; ($installMode is declared after this file is included).
+  Function OpenMathpixAppLanguage
+    Push $0
+    Push $1
+    Push $2
+    StrCpy $appLanguage ""
+    SetShellVarContext current
+    ClearErrors
+    FileOpen $0 "${OPENMATHPIX_DATA_PROFILE}\config.json" r
+    ${IfNot} ${Errors}
+      ${Do}
+        ClearErrors
+        FileRead $0 $1
+        ${If} ${Errors}
+          ${ExitDo}
+        ${EndIf}
+        ClearErrors
+        ${WordFind} $1 '"language": "' "E+1}" $2
+        ${IfNot} ${Errors}
+          StrCpy $1 $2 6
+          ${If} $1 == 'zh-CN"'
+            StrCpy $appLanguage 2052
+          ${Else}
+            StrCpy $1 $2 3
+            ${If} $1 == 'en"'
+              StrCpy $appLanguage 1033
+            ${EndIf}
+          ${EndIf}
+          ${ExitDo}
+        ${EndIf}
+      ${Loop}
+      FileClose $0
+    ${EndIf}
+    ClearErrors
+    Pop $2
+    Pop $1
+    Pop $0
+  FunctionEnd
 !endif
 
 ; NSIS fixes its language table after .onInit. When the first-page dropdown changes
@@ -45,19 +92,28 @@
   !endif
 !macroend
 
-; Use the Windows display language for the first page, including all Chinese locales.
-; The application remembers its own UI language independently of installer language.
+; The first page offers the language OpenMathpix already uses; on a first installation, the
+; Windows display language (including all Chinese locales). The language chosen there is
+; also the app's language: an interactive install hands it over in customInstall.
 !macro customInit
   ${If} ${UAC_IsInnerInstance}
     ; Keep the user's selection when an all-users install elevates the wizard.
     !insertmacro UAC_AsUser_GetGlobalVar $LANGUAGE
   ${Else}
-    System::Call 'kernel32::GetUserDefaultUILanguage() i .r0'
-    IntOp $0 $0 & 0x3ff
-    ${If} $0 == 4
-      StrCpy $LANGUAGE 2052
+    Call OpenMathpixAppLanguage
+    ${If} $installMode == "all"
+      SetShellVarContext all
+    ${EndIf}
+    ${If} $appLanguage != ""
+      StrCpy $LANGUAGE $appLanguage
     ${Else}
-      StrCpy $LANGUAGE 1033
+      System::Call 'kernel32::GetUserDefaultUILanguage() i .r0'
+      IntOp $0 $0 & 0x3ff
+      ${If} $0 == 4
+        StrCpy $LANGUAGE 2052
+      ${Else}
+        StrCpy $LANGUAGE 1033
+      ${EndIf}
     ${EndIf}
     ${GetParameters} $0
     ${GetOptions} $0 "/OPENMATHPIX_LANGUAGE=" $1
@@ -107,7 +163,7 @@
   Function OpenMathpixRefreshLanguage
     ${If} $LANGUAGE == 2052
       !insertmacro MUI_HEADER_TEXT "欢迎安装 OpenMathpix" "选择安装语言，然后点击下一步继续。"
-      ${NSD_SetText} $languageDescription "安装程序已根据 Windows 显示语言选择默认语言。您可以在下方更改。"
+      ${NSD_SetText} $languageDescription "安装程序和 OpenMathpix 都将使用下方选择的语言。安装后也可以在 OpenMathpix 的设置中更改。"
       SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "STR:OpenMathpix 安装"
       GetDlgItem $0 $HWNDPARENT 1
       SendMessage $0 ${WM_SETTEXT} 0 "STR:下一步(&N) >"
@@ -115,7 +171,7 @@
       SendMessage $0 ${WM_SETTEXT} 0 "STR:取消"
     ${Else}
       !insertmacro MUI_HEADER_TEXT "Welcome to OpenMathpix Setup" "Choose your language, then click Next to continue."
-      ${NSD_SetText} $languageDescription "Setup has selected a language based on your Windows display language. You can change it below."
+      ${NSD_SetText} $languageDescription "Setup and OpenMathpix will both use the language selected below. You can change the app's language later in its Settings."
       SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "STR:OpenMathpix Setup"
       GetDlgItem $0 $HWNDPARENT 1
       SendMessage $0 ${WM_SETTEXT} 0 "STR:&Next >"
@@ -158,6 +214,26 @@
 
 !macro customInstall
   WriteRegDWORD SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "InstallerLanguage" $LANGUAGE
+  ; Hand the first page's choice to OpenMathpix, which applies it once at its next start
+  ; (src/main/installer-language.ts). Silent installs, such as in-app updates, choose no
+  ; language and must not override one picked in the app.
+  Delete "$INSTDIR\resources\installer-language"
+  ${IfNot} ${Silent}
+    ${If} $LANGUAGE == 2052
+      StrCpy $0 "zh-CN"
+    ${Else}
+      StrCpy $0 "en"
+    ${EndIf}
+    ; A stamp unique to this installation, so a repeat install is applied again.
+    System::Call 'kernel32::GetSystemTimeAsFileTime(*l .r1)'
+    ClearErrors
+    FileOpen $2 "$INSTDIR\resources\installer-language" w
+    ${IfNot} ${Errors}
+      FileWrite $2 "$0$\r$\n$1$\r$\n"
+      FileClose $2
+    ${EndIf}
+    ClearErrors
+  ${EndIf}
 !macroend
 
 ; Let the application's normal quit flow flush edits, stop workers and release files.
