@@ -1,6 +1,6 @@
 {
   "name": "openmathpix",
-  "version": "2026.11.11",
+  "version": "2026.11.14",
   "license": "AGPL-3.0-only",
   "description": "Open-source formula snipping tool with local MFR-1.5, LaTeX-OCR and PaddleOCR engines",
   "main": "./out/main/index.js",
