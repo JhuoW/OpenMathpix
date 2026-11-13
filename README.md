@@ -64,13 +64,30 @@ You can install both and switch any time in **Settings → Recognition**. Only t
 loaded, and it is released after a few idle minutes. **Local Models** lets you test a model on a
 sample formula, open its folder, or remove it.
 
-Downloads come from Hugging Face and every file is checked against a pinned SHA-256 hash. If
-Hugging Face is slow or blocked, open **Advanced model options** and switch **Download source** to
-**hf-mirror.com**. Cancelled downloads resume where they stopped.
+Downloads come from Hugging Face, and every file is checked against a pinned SHA-256 hash.
+Cancelled downloads resume where they stopped.
 
 <p align="center">
   <img src="image/readme/settings-en.png" alt="Recognition settings with both local models installed" width="460" />
 </p>
+
+## Faster downloads with a mirror
+
+Where Hugging Face is slow or blocked, for example in mainland China, download the models from the
+[hf-mirror.com](https://hf-mirror.com) mirror instead:
+
+1. Open **Settings → Recognition**. On first launch, click **Open Settings** at the bottom of the guide.
+2. Under **Local Models**, expand **Advanced model options**.
+3. Set **Download source** to **hf-mirror.com (mirror)**, then click **Download Local Model**
+   (or **Download** next to a model).
+
+<p align="center">
+  <img src="image/readme/mirror-en.png" alt="Advanced model options with the download source set to hf-mirror.com" width="460" />
+</p>
+
+The setting applies to both models and is remembered. Files from the mirror are checked against the
+same pinned SHA-256 hashes, so the mirror cannot change what gets installed. Choose the source
+before you start a download; it cannot be changed while one is running.
 
 ## Keyboard shortcuts
 
