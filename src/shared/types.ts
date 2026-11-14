@@ -38,6 +38,7 @@ export const IPC = {
   UPDATE_DOWNLOAD: 'update:download',
   UPDATE_CANCEL: 'update:cancel',
   UPDATE_INSTALL: 'update:install',
+  UPDATE_DISMISS: 'update:dismiss',
 
   GET_SETTINGS: 'settings:get',
   SET_SETTINGS: 'settings:set',
@@ -95,6 +96,8 @@ export type EngineStatuses = Record<OCREngine, EngineStatus>;
 /** An in-app update: downloaded, verified, then installed when the user restarts. */
 export type UpdateStatus =
   | { state: 'idle' }
+  /** Found by an automatic check; `canDownload` is false where only the release page helps. */
+  | { state: 'available'; version: string; canDownload: boolean }
   | { state: 'downloading'; version: string; received: number; total: number }
   | { state: 'ready'; version: string }
   | { state: 'error'; version?: string; message: string };
@@ -161,6 +164,8 @@ export interface AppSettings {
   modelSource: ModelSource;
   /** Start in the notification area when the user signs in to Windows. */
   launchAtLogin: boolean;
+  /** Look for a new release once a day and announce it in the window. */
+  autoCheckUpdates: boolean;
 }
 
 export interface OCRResult {

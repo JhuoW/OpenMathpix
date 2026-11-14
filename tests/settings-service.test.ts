@@ -24,6 +24,7 @@ const defaults: AppSettings = {
   latexCopyStyle: 'plain',
   cleanLatex: true,
   launchAtLogin: true,
+  autoCheckUpdates: true,
   modelSource: 'huggingface',
 };
 

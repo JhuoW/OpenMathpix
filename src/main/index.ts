@@ -11,7 +11,15 @@ import {
 } from 'electron';
 import os from 'os';
 import path from 'path';
-import { applyInstallerLanguage, getSettings, setSettings, takeFirstTrayHint } from './store';
+import {
+  applyInstallerLanguage,
+  getLastUpdateCheck,
+  getSettings,
+  recordUpdateCheck,
+  setSettings,
+  takeFirstTrayHint,
+} from './store';
+import { scheduleUpdateChecks, type UpdateSchedule } from './update-schedule';
 import { readInstallerLanguage } from './installer-language';
 import { issueUrl, userGuideUrl } from './release-version';
 import { translate } from '../shared/i18n';
@@ -40,7 +48,7 @@ import { createWindowCloseHandler } from './window-close';
 import { flushBeforeQuit } from './shutdown';
 import { attachTextContextMenu } from './text-context-menu';
 import { showAboutWindow } from './about';
-import { checkForUpdates, runPendingInstaller } from './updates';
+import { checkForUpdates, checkForUpdatesInBackground, runPendingInstaller } from './updates';
 import { setLaunchAtLogin, startedAtLogin, syncLaunchAtLogin } from './login-item';
 import {
   createApplicationMenuTemplate,
@@ -63,6 +71,25 @@ let ipcOperations: { waitForIdle(timeoutMs?: number): Promise<boolean> } | undef
 let updateSettings: ((updates: Partial<AppSettings>) => Promise<AppSettings>) | undefined;
 let menuLanguage: AppSettings['language'] | undefined;
 let launchAtLogin: boolean | undefined;
+let autoCheckUpdates: boolean | undefined;
+let updateChecks: UpdateSchedule | undefined;
+
+/**
+ * Automatic update checks run in the installed app. Development runs only check when a test
+ * asks for it (OPENMATHPIX_UPDATE_CHECK=1), optionally with a shorter first delay.
+ */
+function startUpdateChecks(): void {
+  const testRun = !app.isPackaged && process.env.OPENMATHPIX_UPDATE_CHECK === '1';
+  if (!app.isPackaged && !testRun) return;
+  const testDelay = Number(process.env.OPENMATHPIX_UPDATE_CHECK_DELAY_MS);
+  updateChecks = scheduleUpdateChecks({
+    enabled: () => getSettings().autoCheckUpdates,
+    lastCheck: getLastUpdateCheck,
+    record: recordUpdateCheck,
+    check: checkForUpdatesInBackground,
+    firstDelayMs: testRun && testDelay >= 0 ? testDelay : undefined,
+  });
+}
 
 function showMainWindow(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -313,6 +340,7 @@ app.whenReady().then(async () => {
   }).catch((error) => console.warn('Could not register existing model downloads:', error));
   initDb();
   launchAtLogin = initialSettings.launchAtLogin;
+  autoCheckUpdates = initialSettings.autoCheckUpdates;
   try {
     syncLaunchAtLogin(launchAtLogin);
   } catch (error) {
@@ -371,6 +399,11 @@ app.whenReady().then(async () => {
           console.warn('Could not change the sign-in entry:', error);
         }
       }
+      if (settings.autoCheckUpdates !== autoCheckUpdates) {
+        autoCheckUpdates = settings.autoCheckUpdates;
+        // Switched on: check soon if a day has passed, rather than at the next hourly look.
+        if (autoCheckUpdates) updateChecks?.checkSoon();
+      }
       if (settings.language !== menuLanguage) {
         try {
           refreshNativeMenus();
@@ -418,6 +451,7 @@ app.whenReady().then(async () => {
   refreshNativeMenus();
   registerGlobalShortcut();
   applyTheme();
+  startUpdateChecks();
   // Restore a downloaded/selected local model without forcing first-time users to download.
   // Reapplying the already saved local engine performs strict model validation.
   const selectedEngine = getSettings().ocrEngine;
@@ -442,6 +476,7 @@ app.on('activate', showMainWindow);
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  updateChecks?.stop();
   disposeMfr();
   // A downloaded update the user chose to install starts once everything is saved.
   runPendingInstaller();

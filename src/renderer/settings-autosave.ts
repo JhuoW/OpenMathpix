@@ -21,7 +21,8 @@ export type SettingsGroup =
   | 'latexCopyStyle'
   | 'cleanLatex'
   | 'modelSource'
-  | 'launchAtLogin';
+  | 'launchAtLogin'
+  | 'autoCheckUpdates';
 
 const recognitionKeys = ['ocrEngine', 'apiUrl', 'accessToken', 'pipeline'] as const;
 const groupFor = (key: EditableSetting): SettingsGroup =>

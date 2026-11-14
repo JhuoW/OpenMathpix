@@ -3,7 +3,10 @@ import type { UpdateStatus } from '../../shared/types';
 import { useAppStore } from '../store';
 import { useI18n } from '../hooks/useI18n';
 
-/** Progress of an in-app update below the toolbar; hidden while nothing is happening. */
+/**
+ * Below the toolbar: a new version found by the automatic check, then the in-app download and
+ * install. Hidden while nothing is happening; never a dialog that interrupts the user.
+ */
 export default function UpdateBanner() {
   const { t, message } = useI18n();
   const showToast = useAppStore((state) => state.showToast);
@@ -48,6 +51,27 @@ export default function UpdateBanner() {
           : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-200'
       }`}
     >
+      {status.state === 'available' && (
+        <>
+          <span className="flex-1">
+            {t('OpenMathpix {version} is available.', { version: status.version })}
+          </span>
+          <button
+            type="button"
+            onClick={() => void window.api.downloadUpdate()}
+            className="btn-primary !py-0.5 !text-xs"
+          >
+            {status.canDownload ? t('Download Update') : t('Open Download Page')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void window.api.dismissUpdate()}
+            className="btn-secondary !py-0.5 !text-xs"
+          >
+            {t('Remind Me Later')}
+          </button>
+        </>
+      )}
       {status.state === 'downloading' && (
         <>
           <span>{t('Downloading OpenMathpix {version}...', { version: status.version })}</span>

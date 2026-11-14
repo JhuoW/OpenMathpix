@@ -154,3 +154,16 @@ test('snip, copy and download preferences accept only supported values', () => {
     assert.throws(() => validateSettingsUpdates(updates));
   }
 });
+
+test('automatic update checks can be switched on and off, nothing else', () => {
+  assert.deepEqual(validateSettingsUpdates({ autoCheckUpdates: false }), {
+    autoCheckUpdates: false,
+  });
+  assert.deepEqual(validateSettingsUpdates({ autoCheckUpdates: true }), { autoCheckUpdates: true });
+  for (const value of ['false', 0, null]) {
+    assert.throws(
+      () => validateSettingsUpdates({ autoCheckUpdates: value } as never),
+      /Automatic update checks must be on or off/,
+    );
+  }
+});

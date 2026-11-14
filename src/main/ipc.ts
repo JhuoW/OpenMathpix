@@ -2,7 +2,13 @@ import { app, ipcMain, clipboard, BrowserWindow, dialog, nativeImage, shell } fr
 import { writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { formulaPng, formulaSvg } from './formula-image';
-import { cancelUpdate, downloadUpdate, getUpdateStatus, installUpdate } from './updates';
+import {
+  cancelUpdate,
+  dismissUpdate,
+  getUpdateStatus,
+  installUpdate,
+  startUpdate,
+} from './updates';
 import { IPC } from '../shared/types';
 import type { AppSettings, HistoryUpdate, HotkeyStatus, LocalOCREngine } from '../shared/types';
 import { recognize, testConnection } from '../services/paddleocr';
@@ -274,9 +280,10 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC.UPDATE_GET_STATUS, () => getUpdateStatus());
   ipcMain.handle(IPC.UPDATE_DOWNLOAD, () => {
     ensureRunning();
-    void downloadUpdate();
+    void startUpdate();
   });
   ipcMain.handle(IPC.UPDATE_CANCEL, () => cancelUpdate());
+  ipcMain.handle(IPC.UPDATE_DISMISS, () => dismissUpdate());
   ipcMain.handle(IPC.UPDATE_INSTALL, () => installUpdate());
   // Formula images for slides and chat apps: PNG on the clipboard, PNG or SVG as a file.
   ipcMain.handle(IPC.FORMULA_COPY_IMAGE, async (_event, latex: unknown) => {

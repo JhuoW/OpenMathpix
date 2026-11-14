@@ -110,8 +110,11 @@ const api = {
   saveFormulaImage: (latex: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.FORMULA_SAVE_IMAGE, latex),
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke(IPC.UPDATE_GET_STATUS),
+  /** Downloads the update, or opens its release page where the app cannot install it. */
   downloadUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.UPDATE_DOWNLOAD),
   cancelUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.UPDATE_CANCEL),
+  /** Hides an update notice until the next automatic check. */
+  dismissUpdate: (): Promise<void> => ipcRenderer.invoke(IPC.UPDATE_DISMISS),
   /** Quits and installs; in a development run only reports where the installer is. */
   installUpdate: (): Promise<{ started: boolean; file?: string }> =>
     ipcRenderer.invoke(IPC.UPDATE_INSTALL),

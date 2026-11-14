@@ -49,6 +49,14 @@ const chinese = {
   'Start OpenMathpix when I sign in': '登录 Windows 时自动启动 OpenMathpix',
   'It starts in the notification area, so the snip hotkey works right away.':
     '启动后位于通知区域（托盘），截图快捷键可立即使用。',
+  'Check for updates automatically': '自动检查更新',
+  'Checks once a day and shows a notice at the top of the window when a new version is available.':
+    '每天检查一次，有新版本时在窗口顶部提示。',
+  'Automatic update checks must be on or off.': '自动检查更新必须为开启或关闭。',
+  'OpenMathpix {version} is available.': 'OpenMathpix {version} 已发布。',
+  'Download Update': '下载更新',
+  'Open Download Page': '打开下载页面',
+  'Remind Me Later': '稍后提醒',
   '{model} is installed. Choose it under Recognition Engine to use it.':
     '{model} 已安装。在“识别引擎”中选择它即可使用。',
   'About {size} MB': '约 {size} MB',

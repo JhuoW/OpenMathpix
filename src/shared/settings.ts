@@ -96,6 +96,12 @@ export function validateSettingsUpdates(input: unknown): Partial<AppSettings> {
         if (typeof value !== 'boolean') throw new Error('Start at sign-in must be on or off.');
         updates.launchAtLogin = value;
         break;
+      case 'autoCheckUpdates':
+        if (typeof value !== 'boolean') {
+          throw new Error('Automatic update checks must be on or off.');
+        }
+        updates.autoCheckUpdates = value;
+        break;
       case 'mfrModelEnabled':
       case 'textellerModelEnabled':
         if (typeof value !== 'boolean') throw new Error('Invalid local model state.');

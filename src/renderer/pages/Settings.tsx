@@ -175,7 +175,12 @@ export default function Settings() {
     recognition: !!errors.recognition || !!errors.modelSource,
     snipping: !!errors.snipHotkey || !!errors.afterSnip || hotkeyBlocked,
     output: !!errors.defaultOutputFormat || !!errors.latexCopyStyle || !!errors.cleanLatex,
-    general: !!errors.theme || !!errors.historyLimit || !!errors.language || !!errors.launchAtLogin,
+    general:
+      !!errors.theme ||
+      !!errors.historyLimit ||
+      !!errors.language ||
+      !!errors.launchAtLogin ||
+      !!errors.autoCheckUpdates,
   };
   const clearHistory = async () => {
     if (clearingHistory || useAppStore.getState().isRecognizing) return;
@@ -555,6 +560,27 @@ export default function Settings() {
               </span>
             </label>
             <FieldError message={errors.launchAtLogin} />
+            <label className="mb-4 flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={local.autoCheckUpdates}
+                onChange={(event) =>
+                  settingsSession.edit('autoCheckUpdates', event.target.checked, true)
+                }
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  {t('Check for updates automatically')}
+                </span>
+                <span className="block text-xs text-gray-500">
+                  {t(
+                    'Checks once a day and shows a notice at the top of the window when a new version is available.',
+                  )}
+                </span>
+              </span>
+            </label>
+            <FieldError message={errors.autoCheckUpdates} />
             <fieldset className="mb-4">
               <legend className="text-sm font-medium">{t('Language')}</legend>
               <div className="flex gap-4 mt-2">

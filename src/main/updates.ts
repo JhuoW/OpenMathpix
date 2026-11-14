@@ -175,7 +175,58 @@ export function runPendingInstaller(): void {
   }
 }
 
-/** User initiated check only. Repeated clicks share one bounded request and one result dialog. */
+async function fetchLatestRelease(current: string): Promise<ReleaseCheck> {
+  const response = await net.fetch(LATEST_RELEASE_API, {
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': `OpenMathpix/${current}` },
+    signal: AbortSignal.timeout(15000),
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+  return readLatestRelease(await response.json(), current);
+}
+
+/**
+ * The automatic check: silent when up to date or offline. A newer release is announced by the
+ * banner instead of a dialog. Resolves true when GitHub answered.
+ */
+export async function checkForUpdatesInBackground(): Promise<boolean> {
+  // A download, a ready installer, an error or an earlier notice is already on screen.
+  if (checking || status.state !== 'idle') return false;
+  checking = true;
+  try {
+    const latest = await fetchLatestRelease(app.getVersion());
+    if (latest.available && status.state === 'idle') {
+      release = latest;
+      publish({
+        state: 'available',
+        version: latest.version,
+        canDownload: !!latest.installer && canDownloadUpdates(),
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    checking = false;
+  }
+}
+
+/** The banner's main action: download in the app, or open the release page where it cannot. */
+export async function startUpdate(): Promise<void> {
+  if (status.state === 'available' && !status.canDownload && release) {
+    publish({ state: 'idle' });
+    await shell.openExternal(release.url).catch(() => undefined);
+    return;
+  }
+  await downloadUpdate();
+}
+
+/** "Remind Me Later": hide the notice until the next daily check finds the release again. */
+export function dismissUpdate(): void {
+  if (status.state === 'available') publish({ state: 'idle' });
+}
+
+/** Help > Check for Updates. Repeated clicks share one bounded request and one result dialog. */
 export async function checkForUpdates(parent: BrowserWindow, language: Language): Promise<void> {
   if (checking || parent.isDestroyed()) return;
   const zh = language === 'zh-CN';
@@ -201,13 +252,7 @@ export async function checkForUpdates(parent: BrowserWindow, language: Language)
   checking = true;
   const current = app.getVersion();
   try {
-    const response = await net.fetch(LATEST_RELEASE_API, {
-      headers: { Accept: 'application/vnd.github+json', 'User-Agent': `OpenMathpix/${current}` },
-      signal: AbortSignal.timeout(15000),
-      cache: 'no-store',
-    });
-    if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
-    const latest = readLatestRelease(await response.json(), current);
+    const latest = await fetchLatestRelease(current);
     if (parent.isDestroyed()) return;
     const installable = latest.available && !!latest.installer && canDownloadUpdates();
     const sizeMb = latest.installer ? Math.round(latest.installer.size / 1_000_000) : 0;

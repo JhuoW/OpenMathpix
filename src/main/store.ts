@@ -22,6 +22,7 @@ const defaults = {
   cleanLatex: true,
   modelSource: 'huggingface' as const,
   launchAtLogin: true,
+  autoCheckUpdates: true,
   encryptedToken: '',
   textellerModelPath: '',
   textellerModelEnabled: true,
@@ -35,8 +36,23 @@ type StoredSettings = Omit<AppSettings, 'accessToken'> & {
   localMfrDefaultApplied?: boolean;
   trayHintShown?: boolean;
   installerLanguageApplied?: string;
+  /** When an automatic update check last reached GitHub (ms since the epoch). */
+  lastUpdateCheck?: number;
 };
 const store = new Store<StoredSettings>({ defaults });
+
+export function getLastUpdateCheck(): number | undefined {
+  const value = store.get('lastUpdateCheck');
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+export function recordUpdateCheck(time: number): void {
+  try {
+    store.set('lastUpdateCheck', time);
+  } catch {
+    // A read-only profile only means the next start checks again.
+  }
+}
 
 /** Start in the language chosen in Setup, once per installation. */
 export function applyInstallerLanguage(choice: InstallerLanguage | undefined): boolean {
@@ -107,6 +123,7 @@ export function getSettings(): AppSettings {
     cleanLatex: store.get('cleanLatex', true),
     modelSource: store.get('modelSource', 'huggingface'),
     launchAtLogin: store.get('launchAtLogin', true),
+    autoCheckUpdates: store.get('autoCheckUpdates', true),
   };
 }
 
