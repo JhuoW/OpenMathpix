@@ -24,14 +24,14 @@
   !define OPENMATHPIX_DATA_PROFILE "$APPDATA\${APP_PACKAGE_NAME}"
 !endif
 
-!ifndef BUILD_UNINSTALLER
-  Var appLanguage
+Var appLanguage
 
-  ; Sets $appLanguage to the language OpenMathpix already uses (2052 or 1033), read from the
-  ; signed-in user's settings, or to "" when it has never run. electron-store writes one
-  ; `"key": value` per line. Leaves the current-user shell context: the caller restores it
-  ; ($installMode is declared after this file is included).
-  Function OpenMathpixAppLanguage
+; Sets $appLanguage to the language OpenMathpix already uses (2052 or 1033), read from the
+; signed-in user's settings, or to "" when it has never run. electron-store writes one
+; `"key": value` per line. Leaves the current-user shell context: the caller restores it
+; ($installMode is declared after this file is included). Setup and the uninstaller both
+; follow the app's language, so all three always agree.
+!macro OpenMathpixAppLanguageBody
     Push $0
     Push $1
     Push $2
@@ -67,6 +67,15 @@
     Pop $2
     Pop $1
     Pop $0
+!macroend
+
+!ifndef BUILD_UNINSTALLER
+  Function OpenMathpixAppLanguage
+    !insertmacro OpenMathpixAppLanguageBody
+  FunctionEnd
+!else
+  Function un.OpenMathpixAppLanguage
+    !insertmacro OpenMathpixAppLanguageBody
   FunctionEnd
 !endif
 
@@ -138,9 +147,21 @@
     ${If} $LANGUAGE != $wizardLanguage
       ${GetParameters} $0
       System::Call 'kernel32::GetCurrentProcessId()i.r1'
-      ; /D is consumed by NSIS and absent from GetParameters; keep it last.
+      ; Pass a folder on only if the user started Setup with one (/D=...). Otherwise the
+      ; restarted wizard picks the default for the install mode chosen next: passing the
+      ; per-user default here made an "all users" install land in the user's own AppData.
+      ; NSIS strips /D from $CMDLINE and GetParameters, but not from the process's own.
+      System::Call 'kernel32::GetCommandLine() t .r2'
       ClearErrors
-      Exec '"$EXEPATH" /OPENMATHPIX_LANGUAGE=$LANGUAGE /OPENMATHPIX_PARENT=$1 $0 /D=$INSTDIR'
+      ${WordFind} $2 " /D=" "E+1}" $3
+      ${If} ${Errors}
+        ClearErrors
+        Exec '"$EXEPATH" /OPENMATHPIX_LANGUAGE=$LANGUAGE /OPENMATHPIX_PARENT=$1 $0'
+      ${Else}
+        ; /D must stay last on the command line.
+        ClearErrors
+        Exec '"$EXEPATH" /OPENMATHPIX_LANGUAGE=$LANGUAGE /OPENMATHPIX_PARENT=$1 $0 /D=$INSTDIR'
+      ${EndIf}
       ${If} ${Errors}
         MessageBox MB_OK|MB_ICONSTOP "Could not change the setup language. Please try again. / 无法切换安装语言，请重试。"
         Abort
@@ -277,8 +298,15 @@
     ; always preserve user data, regardless of a previous uninstall choice.
     ; For an all-users install the wizard (and this page) runs in the elevated copy.
     SetSilent normal
+    ; The app's current language, else the one Setup recorded, else the display language.
+    Call un.OpenMathpixAppLanguage
+    ${If} $installMode == "all"
+      SetShellVarContext all
+    ${EndIf}
     ReadRegDWORD $0 SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "InstallerLanguage"
-    ${If} $0 == 1033
+    ${If} $appLanguage != ""
+      StrCpy $LANGUAGE $appLanguage
+    ${ElseIf} $0 == 1033
     ${OrIf} $0 == 2052
       StrCpy $LANGUAGE $0
     ${Else}
